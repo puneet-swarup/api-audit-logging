@@ -1,0 +1,72 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    // Spring Boot 3.3.x/3.4.x is the current stable.
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+
+    // Use Shadow 8.3.0+ for Gradle 9 compatibility
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+
+    // Spotless 7.0.0+ is designed for Gradle 9
+    id 'com.diffplug.spotless' version '6.25.0'
+
+    // Sonar 6.0+ handles the removal of internal Gradle util classes
+    id 'org.sonarqube' version '6.0.1.5171'
+}
+
+group = 'com.api.audit'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation ('org.springframework.boot:spring-boot-starter-data-jpa') {
+        exclude group: 'org.jboss.logging', module: 'jboss-logging'
+    }
+
+    // Ensure Feign matches Spring Boot 3.4.x (Cloud 2024.0.x)
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+    implementation 'org.flywaydb:flyway-core'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+    archiveClassifier.set('')
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+        importOrder()
+        removeUnusedImports()
+        endWithNewline()
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Ensure Spotless applies formatting automatically before the compilation starts
+tasks.named('compileJava') {
+    dependsOn 'spotlessApply'
+}

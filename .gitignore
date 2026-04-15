@@ -1,0 +1,23 @@
+# --- Build Artifacts ---
+build/
+.gradle/
+out/
+
+# --- IDE Settings (Local to your machine) ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+
+# --- Sensitive / Environment ---
+bin/
+*.log
+.DS_Store
+Thumbs.db
+
+# --- Gradle Wrapper (Optional but Recommended to Keep) ---
+# We usually KEEP gradlew and the gradle/ folder so others can build it.
+# Do NOT ignore: gradlew, gradlew.bat, gradle/wrapper/
