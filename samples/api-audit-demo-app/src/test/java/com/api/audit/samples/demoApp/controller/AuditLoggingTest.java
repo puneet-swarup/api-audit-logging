@@ -1,11 +1,14 @@
 package com.api.audit.samples.demoApp.controller;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +16,13 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
 public class AuditLoggingTest {
 
     @Autowired
@@ -22,6 +30,14 @@ public class AuditLoggingTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void clearDatabase() {
+        jdbcTemplate.execute("DELETE FROM api_audit_log");
+    }
 
     @Test
     void testAuditLogPersistenceMethod() {
@@ -63,7 +79,7 @@ public class AuditLoggingTest {
             List<Map<String, Object>> logs = jdbcTemplate.queryForList("SELECT * FROM api_audit_log");
             assertThat(logs).isNotEmpty();
 
-            Map<String, Object> lastLog = logs.get(1);
+            Map<String, Object> lastLog = logs.get(0);
             assertThat(lastLog.get("service_name")).isEqualTo("api-audit-demo-app");
             assertThat(lastLog.get("type")).isEqualTo("INCOMING");
             assertThat(lastLog.get("method")).isEqualTo("GET");
@@ -77,5 +93,25 @@ public class AuditLoggingTest {
             assertThat(lastLog.get("timestamp")).isNotNull();
             assertThat(lastLog.get("id")).isNotNull();
         });
+    }
+
+    @Test
+    void whenApiIsHit_thenLogIsRetrievableViaInternalApi() throws Exception {
+        // 1. Trigger the public API
+        mockMvc.perform(get("/api/v1/hello")
+                        .param("name", "Puneet")
+                        .header("X-Correlation-Id", "test-123"))
+                .andExpect(status().isOk());
+
+        // 2. Wait for Async Persistence (Simple approach)
+        await().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
+
+            // 3. Query the Internal API using the Correlation ID
+            mockMvc.perform(get("/internal/audit-logs")
+                            .param("correlationId", "test-123")
+                            .param("type", "INCOMING"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].serviceName").value("api-audit-demo-app"))
+                    .andExpect(jsonPath("$.content[0].responseBody").value(containsString("Puneet")));        });
     }
 }

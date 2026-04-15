@@ -9,6 +9,12 @@ spring:
     username: sa
     password: ""
 
+  # PageImpl serialization for stable response JSON
+  data:
+    web:
+      page-serialization-mode: via-dto
+
+
   # H2 Web Console Access (http://localhost:8080/h2-console)
   h2:
     console:
