@@ -1,0 +1,1 @@
+If you discover a security vulnerability, please open a private issue. We take security seriously and will address PII masking concerns as a priority.

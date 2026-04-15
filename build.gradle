@@ -13,6 +13,7 @@ plugins {
 
     // Sonar 6.0+ handles the removal of internal Gradle util classes
     id 'org.sonarqube' version '6.0.1.5171'
+    id 'maven-publish'
 }
 
 group = 'com.api.audit'
@@ -69,4 +70,12 @@ tasks.named('test') {
 // Ensure Spotless applies formatting automatically before the compilation starts
 tasks.named('compileJava') {
     dependsOn 'spotlessApply'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }

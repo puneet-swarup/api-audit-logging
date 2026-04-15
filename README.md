@@ -1,3 +1,7 @@
+
+![Java Version](https://img.shields.io/badge/Java-21-blue?style=for-the-badge&logo=java)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4-brightgreen?style=for-the-badge&logo=springboot)
+![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge&logo=apache)
 # API Audit & Logging Library
 
 
@@ -7,6 +11,8 @@ A high-performance, non-invasive auditing library for Spring Boot 3.4+ microserv
 ![Architectural Visual Flow](./assets/architectural-workflow.png)
 
 ---
+## ⚡ Performance & Resiliency
+To ensure zero impact on application latency, the Audit Library utilizes a Fire-and-Forget pattern. All persistence operations are offloaded to a dedicated ThreadPoolTaskExecutor. We implement a DiscardOldestPolicy to protect the primary application memory under extreme load conditions.
 ## 🛠️ Installation & Dependency Management
 
 This library is distributed as a JAR. For enterprise environments utilizing a `flatDir` repository structure:

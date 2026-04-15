@@ -1,0 +1,1 @@
+Thank you for considering contributing! Please ensure all code changes include tests and follow the Google Java Format.
