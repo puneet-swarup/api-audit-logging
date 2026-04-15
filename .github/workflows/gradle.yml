@@ -18,5 +18,17 @@ jobs:
         distribution: 'temurin'
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
+  # 1. Existing Build (Builds your library)
     - name: Build with Gradle
       run: ./gradlew build
+
+  # 2. NEW: Publish to the runner's local storage
+    - name: Publish to Maven Local
+      run: ./gradlew publishToMavenLocal
+
+  # 3. NEW: Run the sample app
+    - name: Build and Test Samples
+      run: |
+        cd samples/api-audit-demo-app
+        chmod +x gradlew
+        ./gradlew build
