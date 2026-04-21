@@ -1,23 +1,15 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'jacoco'
-    // Spring Boot 3.3.x/3.4.x is the current stable.
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
-
-    // Use Shadow 8.3.0+ for Gradle 9 compatibility
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
-
-    // Spotless 7.0.0+ is designed for Gradle 9
-    id 'com.diffplug.spotless' version '6.25.0'
-
-    // Sonar 6.0+ handles the removal of internal Gradle util classes
+    id 'com.diffplug.spotless' version '7.0.2'
     id 'org.sonarqube' version '6.0.1.5171'
     id 'maven-publish'
 }
 
 group = 'com.api.audit'
-version = '1.0.0'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -30,19 +22,23 @@ java {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation ('org.springframework.boot:spring-boot-starter-data-jpa') {
-        exclude group: 'org.jboss.logging', module: 'jboss-logging'
-    }
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.0'
 
-    // Ensure Feign matches Spring Boot 3.4.x (Cloud 2024.0.x)
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.0'
+    // 'implementation' scope: internal only, NOT exposed to consumers.
+    implementation 'org.flywaydb:flyway-core'
+
+    // Optional: present only if host already uses Micrometer/Actuator.
+    // Never forced onto the host's classpath.
+    compileOnly 'io.micrometer:micrometer-core'
 
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
-    implementation 'org.flywaydb:flyway-core'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.micrometer:micrometer-core'
 }
 
 bootJar {
@@ -67,15 +63,48 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Ensure Spotless applies formatting automatically before the compilation starts
 tasks.named('compileJava') {
     dependsOn 'spotlessApply'
 }
 
+// POM metadata for GitHub Packages publishing
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
+
+            pom {
+                name = 'API Audit Logging Library'
+                description = 'Non-invasive, annotation-driven API audit logging for Spring Boot 3.4+ microservices'
+                url = 'https://github.com/puneet-swarup/api-audit-logging'
+                licenses {
+                    license {
+                        name = 'Apache License 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'puneet-swarup'
+                        name = 'Puneet Swarup'
+                        url = 'https://www.linkedin.com/in/puneet-swarup/'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/puneet-swarup/api-audit-logging'
+                    connection = 'scm:git:git://github.com/puneet-swarup/api-audit-logging.git'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/puneet-swarup/api-audit-logging')
+            credentials {
+                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+                password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
+            }
         }
     }
 }

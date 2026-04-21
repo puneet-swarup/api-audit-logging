@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 public class ApiLogListener {
 
   private final ApiAuditLogRepository repository;
+  private final JsonMasker jsonMasker;
 
   /**
    * Processes and persists the captured audit data.
@@ -52,8 +53,8 @@ public class ApiLogListener {
     ApiAuditLog audit = event.log();
 
     // Security Enforcement: Mask sensitive fields before data hits the storage layer
-    audit.setRequestBody(JsonMasker.mask(audit.getRequestBody()));
-    audit.setResponseBody(JsonMasker.mask(audit.getResponseBody()));
+    audit.setRequestBody(jsonMasker.mask(audit.getRequestBody()));
+    audit.setResponseBody(jsonMasker.mask(audit.getResponseBody()));
 
     repository.save(audit);
   }

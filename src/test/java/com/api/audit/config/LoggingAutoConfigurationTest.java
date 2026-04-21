@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 
 import com.api.audit.context.CorrelationContext;
 import com.api.audit.filter.IncomingLoggingFilter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -15,18 +16,24 @@ import org.springframework.core.Ordered;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class LoggingAutoConfigurationTest {
+  private final AuditLoggingProperties properties = new AuditLoggingProperties();
+  private final LoggingAutoConfiguration config = new LoggingAutoConfiguration(properties);
 
-  private final LoggingAutoConfiguration config = new LoggingAutoConfiguration();
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
           .withConfiguration(AutoConfigurations.of(LoggingAutoConfiguration.class));
+
+  @BeforeEach
+  void setUp() {
+    // Reset appName to a known value before each test that needs it
+    ReflectionTestUtils.setField(config, "appName", "test-service");
+  }
 
   @Test
   @DisplayName(
       "GIVEN no spring.application.name property WHEN printAuditBanner THEN log warning (Branch Coverage)")
   void testVerifyLibraryInitialization_UnknownService() {
     ReflectionTestUtils.setField(config, "appName", "unknown-service");
-
     assertDoesNotThrow(config::printAuditBanner);
   }
 

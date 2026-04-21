@@ -11,14 +11,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class CleanupConfigTest {
 
+  @TestConfiguration
+  @EnableConfigurationProperties(AuditLoggingProperties.class)
+  static class TestConfig {}
+
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
           .withConfiguration(AutoConfigurations.of(CleanupConfig.class))
-          .withBean(ApiAuditLogRepository.class, () -> mock(ApiAuditLogRepository.class));
+          .withBean(ApiAuditLogRepository.class, () -> mock(ApiAuditLogRepository.class))
+          .withUserConfiguration(TestConfig.class);
 
   @Test
   @DisplayName("Should not load CleanupConfig when property is disabled")
@@ -52,7 +59,6 @@ class CleanupConfigTest {
                   ArgumentCaptor.forClass(LocalDateTime.class);
               verify(repository).deleteByTimestampBefore(cutoffCaptor.capture());
 
-              // FIX: Explicitly extract the value to a typed variable
               LocalDateTime actualCutoff = cutoffCaptor.getValue();
               LocalDateTime expectedCutoff = LocalDateTime.now().minusDays(10);
 

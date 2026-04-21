@@ -1,40 +1,49 @@
 spring:
   application:
     name: api-audit-demo-app
-
-  # H2 Database Configuration
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
-
-  # PageImpl serialization for stable response JSON
   data:
     web:
       page-serialization-mode: via-dto
-
-
-  # H2 Web Console Access (http://localhost:8080/h2-console)
   h2:
     console:
       enabled: true
       path: /h2-console
-
-  # JPA / Hibernate Settings
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
-    show-sql: true # Helpful for debugging your library's inserts
-
-    # Example custom configuration for your library
+    show-sql: true
 
 audit:
   logging:
+    internal:
+      api-key: dev-only-key
+    masking:
+      additional-fields:
+      # Add host domain-specific sensitive fields here
+      # - otp
+      # - nationalId
+      # - pin
     enabled: true
+    flyway:
+      enabled: true
+    async:
+      core-pool-size: 5
+      max-pool-size: 20
+      queue-capacity: 1000
+      # CALLER_RUNS    → no record lost; caller thread pays latency cost (DEFAULT)
+      # DISCARD_OLDEST → oldest queued record dropped; zero latency impact
+      # DISCARD        → incoming record dropped; zero latency impact
+      # ABORT          → throws RejectedExecutionException
+      rejection-policy: CALLER_RUNS
     feign-error:
       enabled: false
     cleanup:
       enabled: false
       days: 15
+      cron: "0 0 2 * * *"

@@ -3,18 +3,22 @@ package com.api.audit.config;
 import com.api.audit.context.CorrelationContext;
 import com.api.audit.feign.CustomFeignErrorDecoder;
 import com.api.audit.feign.CustomFeignLogger;
+import com.api.audit.filter.AuditLogSecurityFilter;
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.interceptor.AuditLogInterceptor;
+import com.api.audit.util.JsonMasker;
 import feign.RequestInterceptor;
 import feign.codec.ErrorDecoder;
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.*;
@@ -25,7 +29,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.servlet.handler.MappedInterceptor;
 
 /**
- * Main auto-configuration class for the Chola Audit and Logging Library.
+ * Main auto-configuration class for the API Audit and Logging Library.
  *
  * <p>This configuration activates a comprehensive auditing suite, including:
  *
@@ -41,13 +45,13 @@ import org.springframework.web.servlet.handler.MappedInterceptor;
  * {@code true}.
  *
  * @author Puneet Swarup
- * @see <a href="docs.spring.io">Spring Auto-configuration</a>
  */
 @Configuration
 @Import(LoggingJpaConfig.class)
 @EnableAsync
 @EnableScheduling
 @ComponentScan(basePackages = "com.api.audit")
+@EnableConfigurationProperties(AuditLoggingProperties.class)
 @ConditionalOnProperty(prefix = "audit.logging", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
@@ -56,16 +60,9 @@ public class LoggingAutoConfiguration {
   @Value("${spring.application.name:unknown-service}")
   private String appName;
 
-  /**
-   * Diagnostic method that executes immediately after the bean initialization.
-   *
-   * <p>This method prints a visual ASCII banner and a status message to the logs to confirm that
-   * the Audit Logging module has been successfully loaded.
-   *
-   * <p>Note: This will only execute if the {@code audit.logging.enabled} property is set to {@code
-   * true}, as governed by the class-level {@link
-   * org.springframework.boot.autoconfigure.condition.ConditionalOnProperty} annotation.
-   */
+  private final AuditLoggingProperties properties;
+
+  /** Prints the library banner on startup. */
   @PostConstruct
   public void printAuditBanner() {
     System.out.println(
@@ -90,12 +87,7 @@ public class LoggingAutoConfiguration {
     }
   }
 
-  /**
-   * Registers the {@link AuditLogInterceptor} for all incoming web requests.
-   *
-   * @param auditLogInterceptor the interceptor responsible for capturing audit events
-   * @return a {@link MappedInterceptor} applied to the "/**" path pattern
-   */
+  /** Registers the {@link AuditLogInterceptor} for all incoming web requests. */
   @Bean
   public MappedInterceptor auditInterceptors(AuditLogInterceptor auditLogInterceptor) {
     return new MappedInterceptor(new String[] {"/**"}, auditLogInterceptor);
@@ -104,44 +96,99 @@ public class LoggingAutoConfiguration {
   /**
    * Defines the thread pool dedicated to asynchronous logging operations.
    *
-   * <p>The executor uses a {@link ThreadPoolExecutor.DiscardOldestPolicy} to ensure that in the
-   * event of a system saturation, the main application performance is prioritized over log
-   * retention.
+   * <p>The rejection policy when the queue is full is configurable via {@code
+   * audit.logging.async.rejection-policy}:
    *
-   * @return an {@link Executor} configured with a core size of 5 and max size of 20
+   * <ul>
+   *   <li>{@code CALLER_RUNS} — no record lost; caller thread pays latency cost (default)
+   *   <li>{@code DISCARD_OLDEST} — oldest queued record dropped; zero caller latency
+   *   <li>{@code DISCARD} — incoming record dropped; zero caller latency
+   *   <li>{@code ABORT} — throws RejectedExecutionException
+   * </ul>
+   *
+   * <p>All policies emit a WARN log on saturation to aid capacity tuning.
    */
   @Bean(name = "logExecutor")
   public Executor logExecutor() {
+    AuditLoggingProperties.Async asyncProps = properties.getAsync();
+
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(5);
-    executor.setMaxPoolSize(20);
-    executor.setQueueCapacity(1000);
+    executor.setCorePoolSize(asyncProps.getCorePoolSize());
+    executor.setMaxPoolSize(asyncProps.getMaxPoolSize());
+    executor.setQueueCapacity(asyncProps.getQueueCapacity());
     executor.setThreadNamePrefix("AuditLog-");
-    // CRITICAL: If queue is full, the log is simply dropped to save the main audit
-    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
+    executor.setRejectedExecutionHandler(buildRejectionHandler(asyncProps.getRejectionPolicy()));
     executor.initialize();
+
+    log.info(
+        "[AuditLog] Executor ready — corePool={}, maxPool={}, queue={}, policy={}",
+        asyncProps.getCorePoolSize(),
+        asyncProps.getMaxPoolSize(),
+        asyncProps.getQueueCapacity(),
+        asyncProps.getRejectionPolicy());
+
     return executor;
   }
 
   /**
-   * Configures the filter responsible for intercepting and logging raw inbound HTTP traffic.
+   * Builds the {@link RejectedExecutionHandler} for the configured policy.
    *
-   * @param publisher the event publisher used to broadcast logging events
-   * @return an initialized {@link IncomingLoggingFilter}
+   * <p>Every policy variant emits a WARN log when triggered so saturation is always observable
+   * regardless of which policy the developer chose.
    */
+  private RejectedExecutionHandler buildRejectionHandler(AuditRejectionPolicy policy) {
+    return switch (policy) {
+      case CALLER_RUNS ->
+          new ThreadPoolExecutor.CallerRunsPolicy() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+              log.warn(
+                  "[AuditLog] Queue full (CALLER_RUNS) — caller thread will persist this record."
+                      + " Consider increasing audit.logging.async.queue-capacity.");
+              super.rejectedExecution(r, e);
+            }
+          };
+
+      case DISCARD_OLDEST ->
+          new ThreadPoolExecutor.DiscardOldestPolicy() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+              log.warn(
+                  "[AuditLog] Queue full (DISCARD_OLDEST) — oldest pending audit record dropped."
+                      + " Consider increasing audit.logging.async.queue-capacity.");
+              super.rejectedExecution(r, e);
+            }
+          };
+
+      case DISCARD ->
+          new ThreadPoolExecutor.DiscardPolicy() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+              log.warn(
+                  "[AuditLog] Queue full (DISCARD) — incoming audit record dropped."
+                      + " Consider increasing audit.logging.async.queue-capacity.");
+              super.rejectedExecution(r, e);
+            }
+          };
+
+      case ABORT ->
+          new ThreadPoolExecutor.AbortPolicy() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+              log.warn("[AuditLog] Queue full (ABORT) — throwing RejectedExecutionException.");
+              super.rejectedExecution(r, e);
+            }
+          };
+    };
+  }
+
+  /** Configures the filter responsible for intercepting and logging raw inbound HTTP traffic. */
   @Bean
   public IncomingLoggingFilter incomingLoggingFilter(ApplicationEventPublisher publisher) {
     return new IncomingLoggingFilter(publisher, appName);
   }
 
-  /**
-   * Registers the {@link IncomingLoggingFilter} with the highest precedence in the filter chain.
-   * This ensures correlation IDs and request logs are captured before any business logic or
-   * security constraints execute.
-   *
-   * @param filter the logging filter
-   * @return the registration bean with {@link Ordered#HIGHEST_PRECEDENCE}
-   */
+  /** Registers the {@link IncomingLoggingFilter} with highest precedence in the filter chain. */
   @Bean
   public FilterRegistrationBean<IncomingLoggingFilter> loggingFilterRegistration(
       IncomingLoggingFilter filter) {
@@ -150,36 +197,19 @@ public class LoggingAutoConfiguration {
     return bean;
   }
 
-  /**
-   * Provides a custom Feign logger to capture outbound communication.
-   *
-   * @param p the event publisher
-   * @return a {@link CustomFeignLogger} instance
-   */
+  /** Provides a custom Feign logger to capture outbound communication. */
   @Bean
   public feign.Logger feignLogger(ApplicationEventPublisher p) {
     return new CustomFeignLogger(p, appName);
   }
 
-  /**
-   * Sets the Feign logging level to {@code FULL}.
-   *
-   * <p>Note: This is necessary to ensure the {@code feignLogger} bean receives all request and
-   * response metadata.
-   *
-   * @return the {@link feign.Logger.Level#FULL} level
-   */
+  /** Sets the Feign logging level to FULL. */
   @Bean
   public feign.Logger.Level feignLevel() {
-    return feign.Logger.Level.FULL; // Required to trigger the logger
+    return feign.Logger.Level.FULL;
   }
 
-  /**
-   * A Feign {@link RequestInterceptor} that extracts the correlation ID from the Slf4j MDC context
-   * and injects it into outbound HTTP headers.
-   *
-   * @return a request interceptor for distributed tracing
-   */
+  /** Feign RequestInterceptor that propagates the correlation ID to outbound requests. */
   @Bean
   public RequestInterceptor correlationInterceptor() {
     return template -> {
@@ -189,23 +219,9 @@ public class LoggingAutoConfiguration {
   }
 
   /**
-   * Configures the Feign ErrorDecoder with a delegation chain.
+   * Configures the Feign ErrorDecoder with auditing capability via the Decorator Pattern.
    *
-   * <p>This bean is marked as {@link org.springframework.context.annotation.Primary} to ensure that
-   * Feign selects this auditing wrapper as the entry point for error decoding. It automatically
-   * detects if the host service has defined its own {@link feign.codec.ErrorDecoder} and wraps it;
-   * otherwise, it wraps the Feign {@link ErrorDecoder.Default}.
-   *
-   * <p><b>Activation:</b> This bean is DISABLED by default. To enable it, set {@code
-   * audit.logging.feign-error.enabled=true} in your application properties.
-   *
-   * <p><b>Safe Chaining:</b> When enabled, it automatically detects any existing service-level
-   * {@link ErrorDecoder} and wraps it to ensure business exceptions are still propagated after
-   * auditing.
-   *
-   * @param p the event publisher
-   * @param existingDecoders a list of all ErrorDecoder beans currently in the context
-   * @return a primary ErrorDecoder that performs auditing before delegating
+   * <p>Activation: set {@code audit.logging.feign-error.enabled=true}.
    */
   @Bean
   @Primary
@@ -215,15 +231,32 @@ public class LoggingAutoConfiguration {
       havingValue = "true",
       matchIfMissing = false)
   public ErrorDecoder errorDecoder(
-      ApplicationEventPublisher p, java.util.List<ErrorDecoder> existingDecoders) {
+      ApplicationEventPublisher p,
+      java.util.List<ErrorDecoder> existingDecoders,
+      JsonMasker jsonMasker) {
 
-    // Filter out this library's own decoder to prevent infinite recursion
     ErrorDecoder serviceDecoder =
         existingDecoders.stream()
             .filter(d -> !(d instanceof CustomFeignErrorDecoder))
             .findFirst()
             .orElse(new ErrorDecoder.Default());
 
-    return new CustomFeignErrorDecoder(p, appName, serviceDecoder);
+    return new CustomFeignErrorDecoder(p, appName, serviceDecoder, jsonMasker);
+  }
+
+  /**
+   * Registers the {@link AuditLogSecurityFilter} to protect the internal audit endpoint.
+   *
+   * <p>This filter runs at a higher precedence than the main logging filter to ensure
+   * unauthenticated requests are rejected before any request processing occurs.
+   */
+  @Bean
+  public FilterRegistrationBean<AuditLogSecurityFilter> auditSecurityFilterRegistration() {
+    AuditLogSecurityFilter filter = new AuditLogSecurityFilter(properties);
+    FilterRegistrationBean<AuditLogSecurityFilter> registration =
+        new FilterRegistrationBean<>(filter);
+    registration.addUrlPatterns("/internal/audit-logs*");
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+    return registration;
   }
 }

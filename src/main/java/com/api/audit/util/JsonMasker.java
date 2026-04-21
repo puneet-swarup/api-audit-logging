@@ -1,76 +1,81 @@
 package com.api.audit.util;
 
-import java.util.Arrays;
+import com.api.audit.config.AuditLoggingProperties;
 import java.util.List;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
- * Utility for redacting sensitive information from JSON strings before persistence or display.
+ * Spring component that redacts sensitive information from JSON strings before persistence.
  *
- * <p>This class provides a rule-based masking mechanism to ensure that Personally Identifiable
- * Information (PII) and Sensitive Personal Information (SPI), such as credentials and payment
- * details, are not stored in plain text within the audit logs.
+ * <p>Two layers of masking are applied:
  *
- * <p>The masking process uses case-insensitive regular expressions to identify key-value pairs and
- * replace their values with a masked literal ({@code ******}) while preserving the structural
- * integrity of the JSON.
+ * <ol>
+ *   <li><b>Built-in defaults</b> — always applied, regardless of configuration: {@code password,
+ *       token, cvv, cardNumber, secret, authorization}.
+ *   <li><b>Consumer-configured</b> — additional fields specified via {@code
+ *       audit.logging.masking.additional-fields}.
+ * </ol>
+ *
+ * <p>Matching is case-insensitive and uses a contains-check on the JSON key name.
+ *
+ * <p>Example transformation:
+ *
+ * <pre>{@code
+ * Input:  {"password": "mySecret123", "otp": "9876", "id": 101}
+ * Output: {"password": "******", "otp": "******", "id": 101}
+ * }</pre>
  *
  * @author Puneet Swarup
  */
+@Slf4j
+@Component
 public class JsonMasker {
 
-  /** Private constructor to prevent instantiation of this utility class. */
-  private JsonMasker() {
-    // Utility class pattern
-  }
-
-  /**
-   * The collection of JSON keys identified as sensitive.
-   *
-   * <p>Currently tracked keys include: {@code password}, {@code token}, {@code cvv}, {@code
-   * cardNumber}, {@code secret}, and {@code authorization}.
-   */
-  private static final List<String> SENSITIVE_KEYS =
-      Arrays.asList("password", "token", "cvv", "cardNumber", "secret", "authorization");
-
-  /**
-   * The regex pattern used to locate sensitive fields.
-   *
-   * <p>Pattern details:
-   *
-   * <ul>
-   *   <li>{@code (?i)}: Case-insensitive matching.
-   *   <li>{@code "(%s)"}: Captures the specific key name.
-   *   <li>{@code \s*:\s*}: Handles variable spacing around the colon separator.
-   *   <li>{@code "?([^,\"}]+)"?}: Captures the value regardless of whether it is quoted (string) or
-   *       unquoted (numeric/boolean).
-   * </ul>
-   */
+  private static final String MASK = "\"******\"";
   private static final String REGEX_PATTERN = "(?i)\"(%s)\"\\s*:\\s*\"?([^,\"}]+)\"?";
 
   /**
-   * Sanitizes a JSON string by masking values associated with sensitive keys.
+   * Built-in sensitive keys — always masked, non-configurable. These cover the most common
+   * compliance requirements (GDPR, PCI-DSS).
+   */
+  private static final List<String> BUILT_IN_KEYS =
+      List.of("password", "token", "cvv", "cardNumber", "secret", "authorization");
+
+  private final List<String> allSensitiveKeys;
+
+  /**
+   * Constructs the masker by merging built-in defaults with consumer-configured fields.
    *
-   * <p>Example transformation:
-   *
-   * <pre>{@code
-   * Input:  {"password": "mySecret123", "id": 101}
-   * Output: {"password": "******", "id": 101}
-   * }</pre>
+   * @param properties the library configuration properties
+   */
+  public JsonMasker(AuditLoggingProperties properties) {
+    List<String> additional = properties.getMasking().getAdditionalFields();
+    this.allSensitiveKeys =
+        Stream.concat(BUILT_IN_KEYS.stream(), additional.stream()).distinct().toList();
+
+    if (!additional.isEmpty()) {
+      log.debug(
+          "[AuditLog] JsonMasker initialised with {} built-in + {} additional sensitive fields.",
+          BUILT_IN_KEYS.size(),
+          additional.size());
+    }
+  }
+
+  /**
+   * Sanitizes a JSON string by masking values of all configured sensitive keys.
    *
    * @param json the raw JSON string to be processed
    * @return the sanitized JSON string, or {@code null} if the input was null
-   * @implNote For 2026 performance optimization, this method performs multiple passes over the
-   *     string. For extremely large JSON documents, consider a stream-based parsing approach to
-   *     reduce memory pressure.
    */
-  public static String mask(String json) {
+  public String mask(String json) {
     if (json == null) return null;
 
-    String maskedJson = json;
-    for (String key : SENSITIVE_KEYS) {
-      // Replaces the value group ($2) with the mask while keeping the key ($1)
-      maskedJson = maskedJson.replaceAll(String.format(REGEX_PATTERN, key), "\"$1\":\"******\"");
+    String masked = json;
+    for (String key : allSensitiveKeys) {
+      masked = masked.replaceAll(String.format(REGEX_PATTERN, key), "\"$1\":" + MASK);
     }
-    return maskedJson;
+    return masked;
   }
 }

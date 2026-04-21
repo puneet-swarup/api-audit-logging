@@ -190,17 +190,39 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
   }
 
   /**
-   * Safely extracts the response body. Only logs textual content types (JSON/Text/XML) and
-   * truncates data exceeding the 1MB safety limit.
+   * Safely extracts the response body.
    *
-   * @param resWrap The response wrapper containing the buffered body.
-   * @return A sanitized string representation of the response payload.
+   * <p>Capture rules:
+   *
+   * <ol>
+   *   <li>Streaming content types (SSE, chunked, multipart) are never captured — doing so would
+   *       buffer an open stream and break the response for the client.
+   *   <li>Binary content types (images, downloads) are skipped.
+   *   <li>Textual content (JSON, XML, plain text) is captured, with a size limit.
+   * </ol>
+   *
+   * @param resWrap the response wrapper containing the buffered body
+   * @return a sanitized string representation of the response payload
    */
   private String extractResponseBody(ContentCachingResponseWrapper resWrap) {
     String resType = resWrap.getContentType();
-    boolean isTextual =
-        resType != null
-            && (resType.contains("json") || resType.contains("text") || resType.contains("xml"));
+
+    if (resType == null) {
+      return "[NO CONTENT TYPE]";
+    }
+
+    String lower = resType.toLowerCase();
+
+    // Streaming responses must never be buffered — this would hold the stream open
+    // in memory and prevent the client from receiving it correctly.
+    if (lower.contains("text/event-stream")
+        || lower.contains("application/stream")
+        || lower.contains("application/octet-stream")
+        || lower.contains("multipart/")) {
+      return "[STREAMING CONTENT NOT LOGGED]";
+    }
+
+    boolean isTextual = lower.contains("json") || lower.contains("text") || lower.contains("xml");
 
     if (!isTextual) {
       return "[NON-TEXTUAL CONTENT NOT LOGGED]";

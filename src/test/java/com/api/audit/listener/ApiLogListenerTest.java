@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 import com.api.audit.entity.ApiAuditLog;
 import com.api.audit.event.ApiLogEvent;
 import com.api.audit.repository.ApiAuditLogRepository;
+import com.api.audit.util.JsonMasker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ApiLogListenerTest {
 
   @Mock private ApiAuditLogRepository repository;
+  @Mock private JsonMasker jsonMasker;
   @InjectMocks private ApiLogListener listener;
 
   @Test
@@ -26,9 +28,13 @@ class ApiLogListenerTest {
     audit.setResponseBody("{\"token\":\"456\"}");
     ApiLogEvent event = new ApiLogEvent(audit);
 
+    // Stub masker to return a masked value (simulating real behaviour)
+    when(jsonMasker.mask("{\"password\":\"123\"}")).thenReturn("{\"password\":\"******\"}");
+    when(jsonMasker.mask("{\"token\":\"456\"}")).thenReturn("{\"token\":\"******\"}");
+
     listener.handleLog(event);
 
-    // Verify masking happened
+    verify(jsonMasker, times(2)).mask(any());
     verify(repository)
         .save(
             argThat(

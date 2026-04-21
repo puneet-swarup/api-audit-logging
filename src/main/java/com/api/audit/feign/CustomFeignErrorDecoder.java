@@ -39,6 +39,8 @@ public class CustomFeignErrorDecoder implements ErrorDecoder {
   /** The underlying decoder to which execution is delegated after auditing. */
   private final ErrorDecoder delegate;
 
+  private final JsonMasker jsonMasker;
+
   /**
    * Captures the error state and delegates exception creation.
    *
@@ -64,7 +66,7 @@ public class CustomFeignErrorDecoder implements ErrorDecoder {
         String rawBody = new String(bodyData, StandardCharsets.UTF_8);
 
         // Security: Mask sensitive fields in the error response (e.g., error.details.password)
-        audit.setResponseBody(JsonMasker.mask(rawBody));
+        audit.setResponseBody(jsonMasker.mask(rawBody));
 
         /*
          * CRITICAL: We must re-buffer the response body if the delegate needs to

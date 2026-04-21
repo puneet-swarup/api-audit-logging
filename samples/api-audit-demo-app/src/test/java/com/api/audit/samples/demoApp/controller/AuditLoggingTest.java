@@ -100,7 +100,8 @@ public class AuditLoggingTest {
         // 1. Trigger the public API
         mockMvc.perform(get("/api/v1/hello")
                         .param("name", "Puneet")
-                        .header("X-Correlation-Id", "test-123"))
+                        .header("X-Correlation-Id", "test-123")
+                        .header("X-Audit-Api-Key", "dev-only-key"))
                 .andExpect(status().isOk());
 
         // 2. Wait for Async Persistence (Simple approach)
