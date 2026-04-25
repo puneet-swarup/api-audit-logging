@@ -1,0 +1,16 @@
+dependencies {
+    api project(':api-audit-logging-core')
+
+    // Storage modules compileOnly — needed for @ConditionalOnClass detection only.
+    // At runtime exactly one will be present; others are absent.
+    compileOnly project(':api-audit-logging-storage-jpa')
+    compileOnly project(':api-audit-logging-storage-jdbc')
+    compileOnly project(':api-audit-logging-storage-memory')
+
+    // Client modules compileOnly — same pattern
+    compileOnly project(':api-audit-logging-client-feign')
+    compileOnly project(':api-audit-logging-client-webclient')
+    compileOnly project(':api-audit-logging-client-resttemplate')
+}
+
+jar { enabled = true; archiveClassifier.set('') }

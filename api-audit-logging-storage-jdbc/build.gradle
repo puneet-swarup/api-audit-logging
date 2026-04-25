@@ -1,0 +1,7 @@
+dependencies {
+    api project(':api-audit-logging-core')
+    api 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.flywaydb:flyway-core'
+}
+
+jar { enabled = true; archiveClassifier.set('') }

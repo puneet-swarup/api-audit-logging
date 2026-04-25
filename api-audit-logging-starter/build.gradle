@@ -1,0 +1,11 @@
+// No source code lives here — this is a pure dependency aggregator.
+// Adding this one dependency to project pulls everything in.
+dependencies {
+    api project(':api-audit-logging-autoconfigure')
+    api project(':api-audit-logging-storage-jpa')
+    api project(':api-audit-logging-client-feign')
+    api project(':api-audit-logging-client-webclient')
+    api project(':api-audit-logging-client-resttemplate')
+}
+
+jar { enabled = true; archiveClassifier.set('') }

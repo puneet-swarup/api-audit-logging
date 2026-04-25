@@ -1,2 +1,0 @@
-com.api.audit.config.LoggingJpaConfig
-com.api.audit.config.LoggingAutoConfiguration

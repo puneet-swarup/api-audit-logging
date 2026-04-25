@@ -1,0 +1,17 @@
+plugins {
+	id 'org.springframework.boot'
+}
+
+dependencies {
+	// Uses the starter — pulls in JPA storage + all HTTP clients
+	implementation project(':api-audit-logging-starter')
+
+	runtimeOnly 'com.h2database:h2'
+
+	testImplementation 'org.awaitility:awaitility:4.2.2'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Demo app produces an executable JAR
+bootJar { enabled = true }
+jar { enabled = false }
