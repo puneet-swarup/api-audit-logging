@@ -70,6 +70,14 @@ configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
         publications {
             mavenJava(MavenPublication) {
                 from components.java
+                versionMapping {
+                    usage('java-api') {
+                        fromResolutionOf('runtimeClasspath')
+                    }
+                    usage('java-runtime') {
+                        fromResolutionResult()
+                    }
+                }
                 pom {
                     url = 'https://github.com/puneet-swarup/api-audit-logging-parent'
                     licenses {
