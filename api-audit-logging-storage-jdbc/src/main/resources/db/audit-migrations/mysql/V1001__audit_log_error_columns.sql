@@ -1,0 +1,2 @@
+ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS error_type VARCHAR(255);
+ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS error_message LONGTEXT;

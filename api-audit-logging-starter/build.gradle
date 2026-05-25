@@ -1,5 +1,6 @@
-// No source code lives here — this is a pure dependency aggregator.
-// Adding this one dependency to project pulls everything in.
+// No source code lives here; this is the opinionated starter aggregator.
+// It pulls in common auto-configuration, JPA storage, and supported HTTP client integrations.
+// Heavy streaming sinks such as Kafka stay opt-in through their own module.
 dependencies {
     api project(':api-audit-logging-autoconfigure')
     api project(':api-audit-logging-storage-jpa')

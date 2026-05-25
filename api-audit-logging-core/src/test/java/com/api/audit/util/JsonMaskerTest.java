@@ -1,6 +1,7 @@
-package java.com.api.audit.util;
+package com.api.audit.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.api.audit.config.AuditLoggingProperties;
 import java.util.List;
@@ -25,15 +26,15 @@ class JsonMaskerTest {
     String input = "{\"password\":\"secret123\", \"token\": \"abc-123\", \"other\":\"data\"}";
     String result = maskerWithDefaults().mask(input);
 
-    Assertions.assertTrue(result.contains("\"password\":\"******\""));
-    Assertions.assertTrue(result.contains("\"token\":\"******\""));
-    Assertions.assertTrue(result.contains("\"other\":\"data\""));
+    assertTrue(result.contains("\"password\":\"******\""));
+    assertTrue(result.contains("\"token\":\"******\""));
+    assertTrue(result.contains("\"other\":\"data\""));
   }
 
   @Test
   @DisplayName("GIVEN null input WHEN mask called THEN return null")
   void testMask_Null() {
-    Assertions.assertNull(maskerWithDefaults().mask(null));
+    assertNull(maskerWithDefaults().mask(null));
   }
 
   @Test
@@ -41,7 +42,7 @@ class JsonMaskerTest {
   void testMask_CaseInsensitive() {
     String input = "{\"PASSWORD\":\"secret\"}";
     String result = maskerWithDefaults().mask(input);
-    Assertions.assertTrue(result.contains("\"PASSWORD\":\"******\""));
+    assertTrue(result.contains("\"PASSWORD\":\"******\""));
   }
 
   @Test
@@ -50,9 +51,9 @@ class JsonMaskerTest {
     String input = "{\"otp\":\"123456\", \"nationalId\":\"AB123\", \"name\":\"Puneet\"}";
     String result = maskerWithAdditional("otp", "nationalId").mask(input);
 
-    Assertions.assertTrue(result.contains("\"otp\":\"******\""));
-    Assertions.assertTrue(result.contains("\"nationalId\":\"******\""));
-    Assertions.assertTrue(result.contains("\"name\":\"Puneet\""));
+    assertTrue(result.contains("\"otp\":\"******\""));
+    assertTrue(result.contains("\"nationalId\":\"******\""));
+    assertTrue(result.contains("\"name\":\"Puneet\""));
   }
 
   @Test
@@ -62,6 +63,6 @@ class JsonMaskerTest {
     // 'password' is in both built-in and additional — should not cause issues
     String input = "{\"password\":\"secret\"}";
     String result = maskerWithAdditional("password").mask(input);
-    Assertions.assertTrue(result.contains("\"password\":\"******\""));
+    assertTrue(result.contains("\"password\":\"******\""));
   }
 }

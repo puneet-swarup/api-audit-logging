@@ -1,0 +1,6 @@
+dependencies {
+    api project(':api-audit-logging-core')
+    api 'org.springframework.kafka:spring-kafka'
+}
+
+jar { enabled = true; archiveClassifier.set('') }

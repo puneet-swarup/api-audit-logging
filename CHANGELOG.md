@@ -1,3 +1,47 @@
+### [2.0.0] - 2026-05-25
+
+- Reworked the project into a modular Spring Boot starter layout
+- Added common auto-configuration module separate from client and storage integrations
+- Moved Feign configuration into `api-audit-logging-client-feign`
+- Added Feign logger coverage for annotated outbound capture and response re-buffering
+- Added Feign error decoder coverage for masked non-2xx response capture and delegation
+- Added RestTemplate outbound audit logging with response re-buffering
+- Added RestClient outbound audit logging using the same blocking-client interceptor
+- Added blocking-client coverage for outbound event capture, correlation propagation, and response buffering
+- Added blocking-client coverage for non-2xx outbound responses
+- Added WebClient outbound metadata capture and correlation propagation
+- Added WebClient coverage for disabled auto-configuration and non-2xx responses
+- Added outbound transport failure auditing as `OUTGOING_TRANSPORT_ERROR`
+- Added focused WebClient auto-configuration coverage for event publishing and correlation
+- Added capture support for query strings, redacted headers, client IP, user agent, and principal name
+- Added tests for metadata masking, client capture paths, JDBC persistence, JPA mapping, and demo API retrieval
+- Added configurable body and header capture limits with truncation markers
+- Added structured error metadata for inbound failures and Feign error responses
+- Added JPA storage as a selectable module with Boot auto-configuration imports
+- Added JDBC storage for database-backed auditing without JPA
+- Added JDBC storage coverage for save/search behavior against an in-memory database
+- Added auto-configuration coverage for no-store safety and storage selection behavior
+- Changed direct storage modules to require explicit `audit.logging.storage.type`; starter keeps the JPA default
+- Expanded internal search filters across JPA, JDBC, and memory stores
+- Added in-memory storage for demos and integration tests
+- Added demo end-to-end coverage for JDBC and memory storage profiles
+- Added demo multi-hop correlation test for inbound plus outbound audit records
+- Added Kafka audit sink as an opt-in streaming backend
+- Added Kafka auto-configuration coverage for opt-in behavior and custom topic publishing
+- Added Kafka/SIEM consumer guidance for downstream audit platforms
+- Added storage selection property and demo profiles for JPA, JDBC, memory, and Kafka sinks
+- Added multi-service correlation guide with cross-service trace lookup examples
+- Added internal endpoint security guide and blank API-key coverage
+- Added Spring Boot configuration metadata for `audit.logging.*` properties
+- Added HTTP interface client coverage for proxies backed by audited RestClient builders
+- Moved audit schema migration into storage modules under `db/audit-migrations`
+- Split audit schema migrations by database vendor for H2, PostgreSQL, MySQL/MariaDB, SQL Server, and Oracle
+- Added additive metadata-column upgrade migrations for existing audit tables
+- Fixed audit logging defaults so `audit.logging.enabled` is truly enabled unless set to false
+- Fixed POST/PUT inbound request body auditing when the servlet request is wrapped
+- Expanded demo integration coverage for POST body capture
+- Refreshed README for module selection, storage choices, and client integrations
+
 ### [1.1.0] - 2026-04-21
 
 - Introduced `AuditLoggingProperties` POJO replacing `@Value` annotations

@@ -1,19 +1,19 @@
 package com.api.audit.event;
 
-import com.api.audit.entity.ApiAuditLog;
+import com.api.audit.model.AuditLogRecord;
 
 /**
- * A decoupled event carrier used to transport audit data across the application context.
+ * A decoupled event carrier used to transport audit data through the Spring application event bus
+ * for asynchronous persistence.
  *
- * <p>This record is published by interceptors (such as {@code IncomingLoggingFilter} or {@code
- * CustomFeignLogger}) and is typically consumed by an asynchronous event listener. Using an
- * event-driven approach ensures that the primary request thread is not blocked by database I/O
- * operations required for audit persistence.
+ * <p>Published by capture components ({@link com.api.audit.filter.IncomingLoggingFilter}, {@link
+ * com.api.audit.feign.CustomFeignLogger}, WebClient filter, RestTemplate interceptor) and consumed
+ * by {@link com.api.audit.listener.ApiLogListener}.
  *
- * @param log the {@link ApiAuditLog} entity containing the captured transaction metadata and
- *     payloads
+ * <p>Using a Java {@code record} ensures the event is immutable — no component can modify the
+ * captured data after it has been published.
+ *
+ * @param record the fully assembled audit record ready for masking and persistence
  * @author Puneet Swarup
- * @see org.springframework.context.ApplicationEventPublisher
- * @see ApiAuditLog
  */
-public record ApiLogEvent(ApiAuditLog log) {}
+public record ApiLogEvent(AuditLogRecord record) {}

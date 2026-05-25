@@ -1,4 +1,4 @@
-package java.com.api.audit.repository;
+package com.api.audit.repository;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -29,38 +29,47 @@ class ApiLogSpecificationsTest {
   void testWithFilters_AllConditions() {
     LocalDateTime now = LocalDateTime.now();
     Specification<ApiAuditLog> spec =
-        ApiLogSpecifications.withFilters(now, now, "INCOMING", "test", "CID123");
+        ApiLogSpecifications.withFilters(
+            now,
+            now,
+            "INCOMING",
+            "test",
+            "CID123",
+            "demo-service",
+            "GET",
+            200,
+            "203.0.113.10",
+            "puneet",
+            "HTTP_500");
 
-    Mockito.when(root.get(ArgumentMatchers.anyString())).thenReturn(path);
+    when(root.get(anyString())).thenReturn(path);
 
     spec.toPredicate(root, query, cb);
 
-    // Verify each filter was processed
-    Mockito.verify(cb).equal(root.get("correlationId"), "CID123");
-    Mockito.verify(cb).greaterThanOrEqualTo(root.get("timestamp"), now);
-    Mockito.verify(cb).lessThanOrEqualTo(root.get("timestamp"), now);
-    Mockito.verify(cb).equal(root.get("type"), "INCOMING");
-    Mockito.verify(cb).like(root.get("url"), "%test%");
+    verify(cb).equal(root.get("correlationId"), "CID123");
+    verify(cb).greaterThanOrEqualTo(root.get("timestamp"), now);
+    verify(cb).lessThanOrEqualTo(root.get("timestamp"), now);
+    verify(cb).equal(root.get("type"), "INCOMING");
+    verify(cb).like(root.get("url"), "%test%");
+    verify(cb).equal(root.get("serviceName"), "demo-service");
+    verify(cb).equal(root.get("method"), "GET");
+    verify(cb).equal(root.get("httpStatus"), 200);
+    verify(cb).equal(root.get("clientIp"), "203.0.113.10");
+    verify(cb).equal(root.get("principalName"), "puneet");
+    verify(cb).equal(root.get("errorType"), "HTTP_500");
   }
 
   @Test
-  @DisplayName(
-      "GIVEN null filters WHEN toPredicate called THEN cb.and is called with empty array (Branch Coverage)")
+  @DisplayName("GIVEN null filters WHEN toPredicate called THEN conjunction predicate is returned")
   void testWithFilters_NullConditions() {
-    // ARRANGE
     Specification<ApiAuditLog> spec =
-        ApiLogSpecifications.withFilters(null, null, null, null, null);
+        ApiLogSpecifications.withFilters(
+            null, null, null, null, null, null, null, null, null, null, null);
 
-    // ACT
     spec.toPredicate(root, query, cb);
 
-    // ASSERT
-    // cb.and(new Predicate[0]) is effectively cb.and() in varargs
-    Mockito.verify(cb).and(ArgumentMatchers.any(Predicate[].class));
-    // OR more strictly:
-    Mockito.verify(cb).and(new Predicate[0]);
-
-    Mockito.verifyNoInteractions(root);
+    verify(cb).conjunction();
+    verifyNoInteractions(root);
   }
 
   @Test
@@ -69,6 +78,6 @@ class ApiLogSpecificationsTest {
     Constructor<ApiLogSpecifications> constructor =
         ApiLogSpecifications.class.getDeclaredConstructor();
     constructor.setAccessible(true);
-    Assertions.assertNotNull(constructor.newInstance());
+    assertNotNull(constructor.newInstance());
   }
 }

@@ -30,6 +30,8 @@ audit:
       # - nationalId
       # - pin
     enabled: true
+    storage:
+      type: jpa
     flyway:
       enabled: true
     async:
@@ -47,3 +49,7 @@ audit:
       enabled: false
       days: 15
       cron: "0 0 2 * * *"
+
+demo:
+  downstream:
+    status-url: ${DEMO_DOWNSTREAM_STATUS_URL:https://localhost.invalid/api/v1/status?source=demo}

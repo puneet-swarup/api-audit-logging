@@ -1,19 +1,22 @@
-package java.com.api.audit.config;
+package com.api.audit.config;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
-import com.api.audit.context.CorrelationContext;
 import com.api.audit.filter.IncomingLoggingFilter;
+import com.api.audit.listener.ApiLogListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.Ordered;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class LoggingAutoConfigurationTest {
+
   private final AuditLoggingProperties properties = new AuditLoggingProperties();
   private final LoggingAutoConfiguration config = new LoggingAutoConfiguration(properties);
 
@@ -23,71 +26,60 @@ class LoggingAutoConfigurationTest {
 
   @BeforeEach
   void setUp() {
-    // Reset appName to a known value before each test that needs it
     ReflectionTestUtils.setField(config, "appName", "test-service");
   }
 
   @Test
-  @DisplayName(
-      "GIVEN no spring.application.name property WHEN printAuditBanner THEN log warning (Branch Coverage)")
+  @DisplayName("GIVEN unknown-service name WHEN printAuditBanner THEN no exception")
   void testVerifyLibraryInitialization_UnknownService() {
     ReflectionTestUtils.setField(config, "appName", "unknown-service");
     assertDoesNotThrow(config::printAuditBanner);
   }
 
   @Test
-  @DisplayName(
-      "GIVEN spring.application.name property WHEN printAuditBanner THEN log success (Branch Coverage)")
+  @DisplayName("GIVEN known service name WHEN printAuditBanner THEN no exception")
   void testVerifyLibraryInitialization_KnownService() {
     ReflectionTestUtils.setField(config, "appName", "sp-policy-service");
     assertDoesNotThrow(config::printAuditBanner);
   }
 
   @Test
-  @DisplayName(
-      "GIVEN loggingFilterRegistration WHEN initialized THEN verify order is highest precedence")
+  @DisplayName("GIVEN loggingFilterRegistration WHEN initialized THEN it runs after security")
   void testLoggingFilterRegistration() {
-    IncomingLoggingFilter mockFilter = Mockito.mock(IncomingLoggingFilter.class);
+    IncomingLoggingFilter mockFilter = mock(IncomingLoggingFilter.class);
     var bean = config.loggingFilterRegistration(mockFilter);
+    assertEquals(Ordered.HIGHEST_PRECEDENCE + 1, bean.getOrder());
+  }
+
+  @Test
+  @DisplayName("GIVEN auditSecurityFilterRegistration WHEN initialized THEN it runs first")
+  void testAuditSecurityFilterRegistration() {
+    var bean = config.auditSecurityFilterRegistration();
     assertEquals(Ordered.HIGHEST_PRECEDENCE, bean.getOrder());
   }
 
   @Test
   @DisplayName(
-      "GIVEN correlationInterceptor WHEN intercepting request THEN verify MDC header logic")
-  void testCorrelationInterceptor() {
-    var interceptor = config.correlationInterceptor();
-
-    feign.RequestTemplate templateWithCid = new feign.RequestTemplate();
-    MDC.put(CorrelationContext.CORRELATION_ID_HEADER, "MDC-CID-123");
-
-    interceptor.apply(templateWithCid);
-
-    Assertions.assertTrue(
-        templateWithCid.headers().containsKey(CorrelationContext.CORRELATION_ID_HEADER));
-    Assertions.assertEquals(
-        "MDC-CID-123",
-        templateWithCid.headers().get(CorrelationContext.CORRELATION_ID_HEADER).iterator().next());
-
-    feign.RequestTemplate templateWithoutCid = new feign.RequestTemplate();
-    MDC.remove(CorrelationContext.CORRELATION_ID_HEADER);
-
-    interceptor.apply(templateWithoutCid);
-
-    Assertions.assertFalse(
-        templateWithoutCid.headers().containsKey(CorrelationContext.CORRELATION_ID_HEADER),
-        "Header should not be present when MDC is empty");
-  }
-
-  @Test
-  @DisplayName("Should disable auditing when property is explicitly false")
+      "GIVEN audit.logging.enabled=false WHEN context loads THEN no LoggingAutoConfiguration bean")
   void shouldDisableAuditingWhenPropertyIsFalse() {
     contextRunner
         .withPropertyValues("audit.logging.enabled=false")
         .run(
             context -> {
-              Assertions.assertThat(context).doesNotHaveBean(LoggingAutoConfiguration.class);
-              Assertions.assertThat(context).doesNotHaveBean("logExecutor");
+              assertThat(context).doesNotHaveBean(LoggingAutoConfiguration.class);
+              assertThat(context).doesNotHaveBean("logExecutor");
             });
+  }
+
+  @Test
+  @DisplayName(
+      "GIVEN no AuditLogStore WHEN context loads THEN listener and search endpoint stay absent")
+  void shouldStartSafelyWithoutStorageStore() {
+    contextRunner.run(
+        context -> {
+          assertThat(context).hasSingleBean(LoggingAutoConfiguration.class);
+          assertThat(context).doesNotHaveBean(ApiLogListener.class);
+          assertThat(context).doesNotHaveBean(com.api.audit.controller.ApiLogController.class);
+        });
   }
 }

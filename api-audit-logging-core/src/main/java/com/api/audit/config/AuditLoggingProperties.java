@@ -21,6 +21,8 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  *     cleanup:
  *       enabled: true
  *       days: 30
+ *     storage:
+ *       type: jpa
  *     feign-error:
  *       enabled: false
  * }</pre>
@@ -52,9 +54,15 @@ public class AuditLoggingProperties {
 
   @NestedConfigurationProperty private Cleanup cleanup = new Cleanup();
 
+  @NestedConfigurationProperty private Capture capture = new Capture();
+
   @NestedConfigurationProperty private FeignError feignError = new FeignError();
 
   @NestedConfigurationProperty private Flyway flyway = new Flyway();
+
+  @NestedConfigurationProperty private Kafka kafka = new Kafka();
+
+  @NestedConfigurationProperty private Storage storage = new Storage();
 
   @NestedConfigurationProperty private Internal internal = new Internal();
 
@@ -94,6 +102,27 @@ public class AuditLoggingProperties {
      * Default: {@code CALLER_RUNS}.
      */
     private AuditRejectionPolicy rejectionPolicy = AuditRejectionPolicy.CALLER_RUNS;
+  }
+
+  /** Configuration that bounds how much request/response data is copied into audit records. */
+  @Getter
+  @Setter
+  public static class Capture {
+
+    /**
+     * Maximum payload body bytes captured for request or response bodies.
+     *
+     * <p>When a body is larger than this limit, the audit record stores a clear truncation marker
+     * instead of copying the whole payload. Default: {@code 1048576} (1 MiB).
+     */
+    private int maxBodySize = 1024 * 1024;
+
+    /**
+     * Maximum serialized header bytes captured for request or response headers.
+     *
+     * <p>Headers are redacted before this limit is applied. Default: {@code 20000}.
+     */
+    private int maxHeaderSize = 20_000;
   }
 
   /** Configuration for automated audit log data retention and cleanup. */
@@ -150,8 +179,9 @@ public class AuditLoggingProperties {
      * Whether the audit library should manage its own schema via Flyway.
      *
      * <p>When {@code false} (default), the library's Flyway customizer is disabled. Host is
-     * responsible for running the library's migration script manually. The script is available at
-     * {@code classpath:db/audit-migrations/V999__audit_log_init.sql} inside the library JAR.
+     * responsible for running the library's migration script manually. Vendor-specific scripts are
+     * available under {@code classpath:db/audit-migrations/{database}} inside the storage module
+     * JAR.
      *
      * <p>When {@code true}, the library registers a {@link
      * org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer} that adds {@code
@@ -160,6 +190,40 @@ public class AuditLoggingProperties {
      * <p>Default: {@code false}.
      */
     private boolean enabled = false;
+  }
+
+  /** Configuration for the optional Kafka audit sink. */
+  @Getter
+  @Setter
+  public static class Kafka {
+
+    /**
+     * Enable Kafka as the active audit sink when the Kafka storage module is present.
+     *
+     * <p>This is opt-in because publishing audit records to a stream usually needs an explicit
+     * operational decision: topic naming, retention, ACLs, and downstream consumers should be known
+     * before traffic starts flowing.
+     */
+    private boolean enabled = false;
+
+    /** Kafka topic used by the built-in Kafka sink. */
+    private String topic = "api-audit-logs";
+  }
+
+  /** Configuration for selecting one of the built-in searchable storage implementations. */
+  @Getter
+  @Setter
+  public static class Storage {
+
+    /**
+     * Built-in storage implementation to prefer when more than one storage module is present.
+     *
+     * <p>Supported values: {@code jpa}, {@code jdbc}, {@code memory}. When omitted, the starter
+     * keeps its original JPA-first behavior. Kafka remains controlled by {@code
+     * audit.logging.kafka.enabled} because it is a streaming sink rather than a searchable local
+     * store.
+     */
+    private String type;
   }
 
   /** Security configuration for the internal audit log management endpoint. */

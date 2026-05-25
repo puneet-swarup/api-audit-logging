@@ -1,0 +1,14 @@
+audit:
+  logging:
+    storage:
+      type: memory
+    flyway:
+      enabled: false
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:audit-memory-demo;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: none
+

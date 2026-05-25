@@ -1,0 +1,14 @@
+audit:
+  logging:
+    storage:
+      type: jpa
+    flyway:
+      enabled: true
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:audit-jpa-demo;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: update
+

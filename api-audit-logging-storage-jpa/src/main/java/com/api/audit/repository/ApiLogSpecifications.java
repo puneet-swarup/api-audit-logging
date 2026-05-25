@@ -39,6 +39,8 @@ public class ApiLogSpecifications {
    *   <li>{@code start/end}: Inclusive range check on the {@code timestamp} field.
    *   <li>{@code type}: Exact match (e.g., "INCOMING", "OUTGOING").
    *   <li>{@code url}: Partial match (SQL {@code LIKE %value%}).
+   *   <li>{@code serviceName}, {@code method}, {@code httpStatus}, {@code clientIp}, {@code
+   *       principalName}, {@code errorType}: Exact match.
    * </ul>
    *
    * @param start minimum inclusive timestamp
@@ -49,7 +51,17 @@ public class ApiLogSpecifications {
    * @return a {@link Specification} object suitable for use with {@link ApiAuditLogRepository}
    */
   public static Specification<ApiAuditLog> withFilters(
-      LocalDateTime start, LocalDateTime end, String type, String url, String correlationId) {
+      LocalDateTime start,
+      LocalDateTime end,
+      String type,
+      String url,
+      String correlationId,
+      String serviceName,
+      String method,
+      Integer httpStatus,
+      String clientIp,
+      String principalName,
+      String errorType) {
 
     return (root, query, cb) -> {
       List<Predicate> predicates = new ArrayList<>();
@@ -70,8 +82,30 @@ public class ApiLogSpecifications {
         // Performs a partial string match (contains)
         predicates.add(cb.like(root.get("url"), "%" + url + "%"));
       }
+      addEqualIfPresent(predicates, cb, root, "serviceName", serviceName);
+      addEqualIfPresent(predicates, cb, root, "method", method);
+      if (httpStatus != null) {
+        predicates.add(cb.equal(root.get("httpStatus"), httpStatus));
+      }
+      addEqualIfPresent(predicates, cb, root, "clientIp", clientIp);
+      addEqualIfPresent(predicates, cb, root, "principalName", principalName);
+      addEqualIfPresent(predicates, cb, root, "errorType", errorType);
 
+      if (predicates.isEmpty()) {
+        return cb.conjunction();
+      }
       return cb.and(predicates.toArray(new Predicate[0]));
     };
+  }
+
+  private static void addEqualIfPresent(
+      List<Predicate> predicates,
+      jakarta.persistence.criteria.CriteriaBuilder cb,
+      jakarta.persistence.criteria.Root<ApiAuditLog> root,
+      String field,
+      String value) {
+    if (value != null) {
+      predicates.add(cb.equal(root.get(field), value));
+    }
   }
 }

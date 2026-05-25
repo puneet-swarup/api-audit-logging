@@ -5,6 +5,10 @@ plugins {
 dependencies {
 	// Uses the starter — pulls in JPA storage + all HTTP clients
 	implementation project(':api-audit-logging-starter')
+	// Extra storage modules are present only so profiles can demonstrate each sink.
+	implementation project(':api-audit-logging-storage-jdbc')
+	implementation project(':api-audit-logging-storage-memory')
+	implementation project(':api-audit-logging-storage-kafka')
 
 	runtimeOnly 'com.h2database:h2'
 

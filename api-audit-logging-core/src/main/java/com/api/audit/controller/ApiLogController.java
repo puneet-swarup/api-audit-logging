@@ -1,7 +1,7 @@
 package com.api.audit.controller;
 
-import com.api.audit.entity.ApiAuditLog;
-import com.api.audit.service.ApiLogSearchService;
+import com.api.audit.model.AuditLogRecord;
+import com.api.audit.spi.AuditLogSearchStore;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,48 +16,59 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Administrative REST controller providing access to persisted API audit logs.
+ * Internal REST controller providing paginated access to persisted audit logs.
  *
- * <p>This controller exposes endpoints for querying and filtering audit data captured by the
- * library. It is mapped to the {@code /internal} namespace, suggesting it should be restricted via
- * security configurations in a production environment.
+ * <p>Protected by {@link com.api.audit.filter.AuditLogSecurityFilter} — every request must include
+ * a valid {@code X-Audit-Api-Key} header. See {@code audit.logging.internal.api-key}.
+ *
+ * <p>Returns {@link AuditLogRecord} objects — the core model, storage-agnostic. The active {@link
+ * AuditLogSearchStore} implementation handles the actual query.
  *
  * @author Puneet Swarup
- * @see ApiAuditLog
- * @see ApiLogSearchService
  */
 @RestController
 @RequestMapping("/internal/audit-logs")
 @RequiredArgsConstructor
 public class ApiLogController {
-  private final ApiLogSearchService searchService;
+
+  private final AuditLogSearchStore searchStore;
 
   /**
-   * Retrieves a paginated list of audit logs based on various search criteria.
-   *
-   * <p>All parameters are optional. If no filters are provided, the method returns the most recent
-   * logs based on the default pagination settings.
-   *
-   * @param correlationId unique identifier to track a specific request flow
-   * @param start the beginning of the time range (ISO 8601 format)
-   * @param end the end of the time range (ISO 8601 format)
-   * @param type the nature of the log (e.g., INBOUND, OUTBOUND)
-   * @param url the endpoint URL or pattern to filter by
-   * @param pageable pagination and sorting metadata. Defaults to 20 records per page, sorted by
-   *     {@code timestamp} ASC.
-   * @return a {@link ResponseEntity} containing a {@link Page} of {@link ApiAuditLog} entries
+   * Retrieves a paginated list of audit logs based on optional search criteria. All parameters are
+   * optional. Omitted parameters are excluded from the query.
    */
   @GetMapping
-  public ResponseEntity<Page<ApiAuditLog>> getLogs(
-      @RequestParam(required = false) String correlationId,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  public ResponseEntity<Page<AuditLogRecord>> getLogs(
+      @RequestParam(name = "correlationId", required = false) String correlationId,
+      @RequestParam(name = "start", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime start,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+      @RequestParam(name = "end", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime end,
-      @RequestParam(required = false) String type,
-      @RequestParam(required = false) String url,
+      @RequestParam(name = "type", required = false) String type,
+      @RequestParam(name = "url", required = false) String url,
+      @RequestParam(name = "serviceName", required = false) String serviceName,
+      @RequestParam(name = "method", required = false) String method,
+      @RequestParam(name = "httpStatus", required = false) Integer httpStatus,
+      @RequestParam(name = "clientIp", required = false) String clientIp,
+      @RequestParam(name = "principalName", required = false) String principalName,
+      @RequestParam(name = "errorType", required = false) String errorType,
       @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.ASC)
           Pageable pageable) {
-    return ResponseEntity.ok(searchService.search(start, end, type, url, correlationId, pageable));
+    return ResponseEntity.ok(
+        searchStore.search(
+            correlationId,
+            start,
+            end,
+            type,
+            url,
+            serviceName,
+            method,
+            httpStatus,
+            clientIp,
+            principalName,
+            errorType,
+            pageable));
   }
 }

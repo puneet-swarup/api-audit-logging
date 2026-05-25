@@ -1,0 +1,85 @@
+{
+  "properties": [
+    {
+      "name": "audit.logging.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Globally enables the audit logging library. When disabled, the auto-configured interceptors, filters, listeners, storage beans, and internal endpoint stay inactive.",
+      "defaultValue": true
+    },
+    {
+      "name": "audit.logging.async.rejection-policy",
+      "type": "com.api.audit.config.AuditRejectionPolicy",
+      "description": "Policy used when the async audit executor queue is full. CALLER_RUNS protects audit data at the cost of caller latency; DISCARD and DISCARD_OLDEST favor latency; ABORT raises a rejection exception.",
+      "defaultValue": "CALLER_RUNS"
+    },
+    {
+      "name": "audit.logging.capture.max-body-size",
+      "type": "java.lang.Integer",
+      "description": "Maximum request or response body size, in bytes, copied into an audit record. Larger bodies are replaced with a clear truncation marker.",
+      "defaultValue": 1048576
+    },
+    {
+      "name": "audit.logging.capture.max-header-size",
+      "type": "java.lang.Integer",
+      "description": "Maximum serialized request or response header size, in bytes, copied into an audit record. Headers are redacted before this limit is applied.",
+      "defaultValue": 20000
+    },
+    {
+      "name": "audit.logging.storage.type",
+      "type": "java.lang.String",
+      "description": "Preferred built-in storage implementation when more than one storage module is present. Supported values are jpa, jdbc, memory, and kafka. Direct storage modules require this value explicitly; the starter supplies jpa as its convenience default.",
+      "defaultValue": "starter: jpa"
+    },
+    {
+      "name": "audit.logging.flyway.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Adds the audit library's vendor-specific Flyway migration location to the host application's Flyway configuration.",
+      "defaultValue": false
+    },
+    {
+      "name": "audit.logging.kafka.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enables Kafka as the audit sink when the Kafka storage module is present. Kafka is a streaming sink and does not provide internal search by itself.",
+      "defaultValue": false
+    },
+    {
+      "name": "audit.logging.kafka.topic",
+      "type": "java.lang.String",
+      "description": "Kafka topic used by the built-in Kafka audit sink.",
+      "defaultValue": "api-audit-logs"
+    },
+    {
+      "name": "audit.logging.internal.api-key",
+      "type": "java.lang.String",
+      "description": "API key required in the X-Audit-Api-Key header for /internal/audit-logs. Blank or missing values block the endpoint fail-secure."
+    },
+    {
+      "name": "audit.logging.masking.additional-fields",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Additional JSON field names to redact beyond the built-in sensitive fields. Matching is case-insensitive."
+    }
+  ],
+  "hints": [
+    {
+      "name": "audit.logging.storage.type",
+      "values": [
+        {
+          "value": "jpa",
+          "description": "Use JPA entity/repository based persistence and search."
+        },
+        {
+          "value": "jdbc",
+          "description": "Use JdbcTemplate based persistence and search without JPA."
+        },
+        {
+          "value": "memory",
+          "description": "Use in-process storage for demos and tests."
+        },
+        {
+          "value": "kafka",
+          "description": "Publish audit records to Kafka as a write-only stream sink."
+        }
+      ]
+    }
+  ]
+}

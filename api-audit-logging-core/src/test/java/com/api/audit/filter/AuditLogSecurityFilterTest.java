@@ -1,5 +1,6 @@
-package java.com.api.audit.filter;
+package com.api.audit.filter;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.api.audit.config.AuditLoggingProperties;
@@ -20,7 +21,7 @@ class AuditLogSecurityFilterTest {
   void setUp() {
     properties = new AuditLoggingProperties();
     filter = new AuditLogSecurityFilter(properties);
-    chain = Mockito.mock(FilterChain.class);
+    chain = mock(FilterChain.class);
   }
 
   @Test
@@ -31,8 +32,8 @@ class AuditLogSecurityFilterTest {
 
     filter.doFilterInternal(req, res, chain);
 
-    Mockito.verify(chain).doFilter(req, res);
-    Assertions.assertThat(res.getStatus()).isEqualTo(200);
+    verify(chain).doFilter(req, res);
+    assertThat(res.getStatus()).isEqualTo(200);
   }
 
   @Test
@@ -44,8 +45,21 @@ class AuditLogSecurityFilterTest {
 
     filter.doFilterInternal(req, res, chain);
 
-    Assertions.assertThat(res.getStatus()).isEqualTo(403);
-    Mockito.verifyNoInteractions(chain);
+    assertThat(res.getStatus()).isEqualTo(403);
+    verifyNoInteractions(chain);
+  }
+
+  @Test
+  @DisplayName("Audit path blocked with 403 when API key is blank")
+  void auditPath_blankKeyConfigured_returns403() throws Exception {
+    properties.getInternal().setApiKey("   ");
+    MockHttpServletRequest req = new MockHttpServletRequest("GET", "/internal/audit-logs");
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    filter.doFilterInternal(req, res, chain);
+
+    assertThat(res.getStatus()).isEqualTo(403);
+    verifyNoInteractions(chain);
   }
 
   @Test
@@ -58,8 +72,8 @@ class AuditLogSecurityFilterTest {
 
     filter.doFilterInternal(req, res, chain);
 
-    Assertions.assertThat(res.getStatus()).isEqualTo(401);
-    Mockito.verifyNoInteractions(chain);
+    assertThat(res.getStatus()).isEqualTo(401);
+    verifyNoInteractions(chain);
   }
 
   @Test
@@ -72,6 +86,6 @@ class AuditLogSecurityFilterTest {
 
     filter.doFilterInternal(req, res, chain);
 
-    Mockito.verify(chain).doFilter(req, res);
+    verify(chain).doFilter(req, res);
   }
 }

@@ -1,6 +1,5 @@
-package java.com.api.audit.service;
+package com.api.audit.service;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.api.audit.entity.ApiAuditLog;
@@ -25,11 +24,12 @@ class ApiLogSearchServiceTest {
   @DisplayName("GIVEN search params WHEN search is called THEN repository findAll is triggered")
   @SuppressWarnings("unchecked")
   void testSearch() {
-    Page<ApiAuditLog> mockPage = Mockito.mock(Page.class);
-    Mockito.when(repository.findAll(ArgumentMatchers.any(Specification.class), ArgumentMatchers.any(Pageable.class))).thenReturn(mockPage);
+    Page<ApiAuditLog> mockPage = mock(Page.class);
+    when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(mockPage);
 
-    service.search(null, null, null, null, null, Pageable.unpaged());
+    service.search(
+        null, null, null, null, null, null, null, null, null, null, null, Pageable.unpaged());
 
-    Mockito.verify(repository).findAll(ArgumentMatchers.any(Specification.class), ArgumentMatchers.any(Pageable.class));
+    verify(repository).findAll(any(Specification.class), any(Pageable.class));
   }
 }

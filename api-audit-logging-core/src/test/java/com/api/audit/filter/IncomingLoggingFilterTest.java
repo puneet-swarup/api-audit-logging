@@ -1,8 +1,9 @@
-package java.com.api.audit.filter;
+package com.api.audit.filter;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.api.audit.config.AuditLoggingProperties;
 import com.api.audit.context.CorrelationContext;
 import com.api.audit.event.ApiLogEvent;
 import jakarta.servlet.FilterChain;
@@ -33,7 +34,7 @@ class IncomingLoggingFilterTest {
 
   @BeforeEach
   void setUp() {
-    filter = new IncomingLoggingFilter(publisher, appName);
+    filter = new IncomingLoggingFilter(publisher, appName, new AuditLoggingProperties());
     MDC.clear();
   }
 
@@ -47,21 +48,20 @@ class IncomingLoggingFilterTest {
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     // We must verify MDC *inside* the filter chain because it is cleared in finally
-    Mockito.doAnswer(
+    doAnswer(
             invocation -> {
               // ASSERT: Check MDC while the filter is still executing the chain
-              Assertions.assertEquals(
-                  "FIXED-CID-123", MDC.get(CorrelationContext.CORRELATION_ID_HEADER));
+              assertEquals("FIXED-CID-123", MDC.get(CorrelationContext.CORRELATION_ID_HEADER));
               return null;
             })
         .when(chain)
-        .doFilter(ArgumentMatchers.any(), ArgumentMatchers.any());
+        .doFilter(any(), any());
 
     // ACT
     filter.doFilterInternal(request, response, chain);
 
     // ASSERT: Verify MDC is cleared after the filter finishes
-    Assertions.assertNull(
+    assertNull(
         MDC.get(CorrelationContext.CORRELATION_ID_HEADER), "MDC should be cleared after filter");
 
     // Verify that logic for audit event publishing was also covered
@@ -76,26 +76,23 @@ class IncomingLoggingFilterTest {
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     // Explicitly match the wrappers created inside the filter
-    Mockito.doAnswer(
+    doAnswer(
             invocation -> {
               String generatedCid = MDC.get(CorrelationContext.CORRELATION_ID_HEADER);
 
               // ASSERT inside the lambda
-              Assertions.assertNotNull(
-                  generatedCid, "MDC Correlation ID should have been generated");
-              Assertions.assertTrue(generatedCid.length() > 30, "Should be a valid UUID string");
+              assertNotNull(generatedCid, "MDC Correlation ID should have been generated");
+              assertTrue(generatedCid.length() > 30, "Should be a valid UUID string");
               return null;
             })
         .when(chain)
-        .doFilter(
-            ArgumentMatchers.any(HttpServletRequest.class),
-            ArgumentMatchers.any(HttpServletResponse.class));
+        .doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
 
     // ACT
     filter.doFilterInternal(request, response, chain);
 
     // ASSERT after filter
-    Assertions.assertNull(
+    assertNull(
         MDC.get(CorrelationContext.CORRELATION_ID_HEADER), "MDC must be cleared in finally block");
   }
 
@@ -109,9 +106,8 @@ class IncomingLoggingFilterTest {
 
     filter.doFilterInternal(request, response, chain);
 
-    Mockito.verify(publisher, Mockito.never())
-        .publishEvent(ArgumentMatchers.any(ApiLogEvent.class));
-    Assertions.assertNull(MDC.get(CorrelationContext.CORRELATION_ID_HEADER));
+    verify(publisher, never()).publishEvent(any(ApiLogEvent.class));
+    assertNull(MDC.get(CorrelationContext.CORRELATION_ID_HEADER));
   }
 
   @Test
@@ -131,11 +127,48 @@ class IncomingLoggingFilterTest {
     filter.doFilterInternal(request, response, chain);
 
     // ASSERT
-    Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+    verify(publisher).publishEvent(eventCaptor.capture());
     ApiLogEvent capturedEvent = eventCaptor.getValue();
 
     // Java Record accessor usage: capturedEvent.log()
-    Assertions.assertNotNull(capturedEvent.log());
-    assertEquals("TEST-CID-123", capturedEvent.log().getCorrelationId());
+    assertNotNull(capturedEvent.record());
+    assertEquals("TEST-CID-123", capturedEvent.record().getCorrelationId());
+  }
+
+  @Test
+  @DisplayName("GIVEN body exceeds configured limit WHEN audited THEN stores truncation marker")
+  void bodyLimitIsConfigurable() throws ServletException, IOException {
+    AuditLoggingProperties properties = new AuditLoggingProperties();
+    properties.getCapture().setMaxBodySize(5);
+    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/limited");
+    request.setContentType("application/json");
+    request.setContent(
+        "{\"message\":\"too-large\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    ArgumentCaptor<ApiLogEvent> eventCaptor = ArgumentCaptor.forClass(ApiLogEvent.class);
+
+    filter.doFilterInternal(request, response, chain);
+
+    verify(publisher).publishEvent(eventCaptor.capture());
+    assertTrue(eventCaptor.getValue().record().getRequestBody().startsWith("[REQUEST TOO LARGE:"));
+  }
+
+  @Test
+  @DisplayName("GIVEN audited request fails WHEN filter exits THEN publishes error metadata")
+  void capturesErrorMetadataWhenRequestFails() throws ServletException, IOException {
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/fail");
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    ArgumentCaptor<ApiLogEvent> eventCaptor = ArgumentCaptor.forClass(ApiLogEvent.class);
+    doThrow(new ServletException("Controller failed")).when(chain).doFilter(any(), any());
+
+    assertThrows(ServletException.class, () -> filter.doFilterInternal(request, response, chain));
+
+    verify(publisher).publishEvent(eventCaptor.capture());
+    assertEquals("INCOMING_ERROR", eventCaptor.getValue().record().getType());
+    assertEquals(ServletException.class.getName(), eventCaptor.getValue().record().getErrorType());
+    assertEquals("Controller failed", eventCaptor.getValue().record().getErrorMessage());
   }
 }

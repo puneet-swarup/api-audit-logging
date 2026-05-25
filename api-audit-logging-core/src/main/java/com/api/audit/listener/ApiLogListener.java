@@ -1,61 +1,88 @@
 package com.api.audit.listener;
 
-import com.api.audit.entity.ApiAuditLog;
 import com.api.audit.event.ApiLogEvent;
-import com.api.audit.repository.ApiAuditLogRepository;
+import com.api.audit.model.AuditLogRecord;
+import com.api.audit.spi.AuditLogStore;
 import com.api.audit.util.JsonMasker;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
- * Asynchronous event listener responsible for the final processing and persistence of audit logs.
+ * Asynchronous event listener that bridges the capture layer and the storage layer.
  *
- * <p>This component acts as the consumer in the library's event-driven architecture. It decouples
- * the primary request-handling threads from database I/O, ensuring that logging overhead does not
- * impact application throughput or user-perceived latency.
+ * <p>This component sits between the HTTP capture components and the storage backend. It receives
+ * {@link ApiLogEvent} from the Spring event bus, applies data masking, and delegates persistence to
+ * the active {@link AuditLogStore} implementation.
  *
- * <p>The listener also serves as a security checkpoint, applying data masking to sensitive
- * information within the payloads before they are written to the permanent store.
+ * <p><b>Why masking happens here and not in the store:</b> Masking in the listener means every
+ * storage backend — JPA, JDBC, in-memory, or a custom Kafka sink — automatically receives masked
+ * data without needing to implement masking themselves.
+ *
+ * <p><b>Why exceptions are swallowed:</b> Audit failure must never propagate to the request thread.
+ * The application must continue serving requests even if logging fails.
  *
  * @author Puneet Swarup
- * @see ApiLogEvent
- * @see ApiAuditLogRepository
+ * @see AuditLogStore
+ * @see JsonMasker
  */
+@Slf4j
 @Component
 @AllArgsConstructor
 public class ApiLogListener {
 
-  private final ApiAuditLogRepository repository;
+  private final AuditLogStore auditLogStore;
   private final JsonMasker jsonMasker;
 
   /**
-   * Processes and persists the captured audit data.
+   * Processes and persists the captured audit data asynchronously.
    *
-   * <p>This method is executed asynchronously using the {@code logExecutor} thread pool. Before
-   * saving the entity to the database, it performs the following operations:
+   * <p>Executed on the {@code logExecutor} thread pool, ensuring this method returns immediately to
+   * the caller and database I/O never blocks the request thread.
    *
-   * <ol>
-   *   <li>Extracts the {@link ApiAuditLog} from the published event.
-   *   <li>Applies {@link JsonMasker} to the request body to redact sensitive PII/SPI data.
-   *   <li>Applies {@link JsonMasker} to the response body for the same security constraints.
-   *   <li>Commits the sanitized entity to the database via the JPA repository.
-   * </ol>
-   *
-   * @param event the audit log event containing the raw transaction data
-   * @implNote The {@link Async} annotation ensures this method returns immediately to the caller,
-   *     typically the Spring ApplicationEventPublisher in the request thread.
+   * @param event the audit log event containing the raw captured transaction data
    */
   @Async("logExecutor")
   @EventListener
   public void handleLog(ApiLogEvent event) {
-    ApiAuditLog audit = event.log();
+    AuditLogRecord original = event.record();
 
-    // Security Enforcement: Mask sensitive fields before data hits the storage layer
-    audit.setRequestBody(jsonMasker.mask(audit.getRequestBody()));
-    audit.setResponseBody(jsonMasker.mask(audit.getResponseBody()));
+    // Build a new immutable record with masked bodies.
+    // AuditLogRecord is immutable (@Value) so we rebuild using the builder.
+    AuditLogRecord masked =
+        AuditLogRecord.builder()
+            .serviceName(original.getServiceName())
+            .type(original.getType())
+            .method(original.getMethod())
+            .description(original.getDescription())
+            .url(original.getUrl())
+            .queryString(original.getQueryString())
+            .requestHeaders(original.getRequestHeaders())
+            .responseHeaders(original.getResponseHeaders())
+            .requestBody(jsonMasker.mask(original.getRequestBody()))
+            .responseBody(jsonMasker.mask(original.getResponseBody()))
+            .httpStatus(original.getHttpStatus())
+            .duration(original.getDuration())
+            .correlationId(original.getCorrelationId())
+            .clientIp(original.getClientIp())
+            .userAgent(original.getUserAgent())
+            .principalName(original.getPrincipalName())
+            .errorType(original.getErrorType())
+            .errorMessage(original.getErrorMessage())
+            .timestamp(original.getTimestamp())
+            .build();
 
-    repository.save(audit);
+    try {
+      auditLogStore.save(masked);
+    } catch (Exception e) {
+      // Audit failure must NEVER propagate to the calling request thread.
+      log.error(
+          "[AuditLog] Failed to persist audit record for correlationId={}: {}",
+          original.getCorrelationId(),
+          e.getMessage(),
+          e);
+    }
   }
 }

@@ -44,9 +44,16 @@ public class ApiLogSearchService {
    * @param type the transaction category (e.g., INCOMING, OUTGOING, ERROR)
    * @param url a string snippet to perform a partial match against request URLs
    * @param correlationId the specific trace ID used to isolate a single logical transaction flow
+   * @param serviceName exact service name to include, useful when one app audits several clients
+   * @param method exact HTTP method to include
+   * @param httpStatus exact HTTP response status to include
+   * @param clientIp exact caller IP to include
+   * @param principalName exact authenticated principal to include
+   * @param errorType exact captured error type to include
    * @param pageable pagination parameters including page number, size, and sorting instructions
    * @return a {@link Page} of {@link ApiAuditLog} entities matching the specified criteria
-   * @see ApiLogSpecifications#withFilters(LocalDateTime, LocalDateTime, String, String, String)
+   * @see ApiLogSpecifications#withFilters(LocalDateTime, LocalDateTime, String, String, String,
+   *     String, String, Integer, String, String, String)
    */
   public Page<ApiAuditLog> search(
       LocalDateTime start,
@@ -54,9 +61,27 @@ public class ApiLogSearchService {
       String type,
       String url,
       String correlationId,
+      String serviceName,
+      String method,
+      Integer httpStatus,
+      String clientIp,
+      String principalName,
+      String errorType,
       Pageable pageable) {
 
     return repository.findAll(
-        ApiLogSpecifications.withFilters(start, end, type, url, correlationId), pageable);
+        ApiLogSpecifications.withFilters(
+            start,
+            end,
+            type,
+            url,
+            correlationId,
+            serviceName,
+            method,
+            httpStatus,
+            clientIp,
+            principalName,
+            errorType),
+        pageable);
   }
 }

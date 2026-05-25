@@ -1,27 +1,27 @@
 package com.api.audit.config;
 
-import com.api.audit.context.CorrelationContext;
-import com.api.audit.feign.CustomFeignErrorDecoder;
-import com.api.audit.feign.CustomFeignLogger;
+import com.api.audit.controller.ApiLogController;
 import com.api.audit.filter.AuditLogSecurityFilter;
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.interceptor.AuditLogInterceptor;
+import com.api.audit.listener.ApiLogListener;
+import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.util.JsonMasker;
-import feign.RequestInterceptor;
-import feign.codec.ErrorDecoder;
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -35,24 +35,35 @@ import org.springframework.web.servlet.handler.MappedInterceptor;
  *
  * <ul>
  *   <li>Inbound HTTP request/response logging via {@link IncomingLoggingFilter}.
- *   <li>Outbound Feign client logging via {@link CustomFeignLogger}.
  *   <li>Persistence-layer auditing via {@link AuditLogInterceptor}.
  *   <li>Asynchronous execution for logging tasks to prevent latency in the primary request path.
  *   <li>Correlation ID propagation across distributed boundaries.
  * </ul>
+ *
+ * <p>Client-specific integrations such as Feign, RestTemplate, and WebClient are configured by
+ * their own modules. That keeps the common starter small and allows services to opt into only the
+ * HTTP clients they actually use.
  *
  * <p>Activation is controlled by the property {@code audit.logging.enabled}, which defaults to
  * {@code true}.
  *
  * @author Puneet Swarup
  */
-@Configuration
-@Import(LoggingJpaConfig.class)
+@AutoConfiguration(
+    afterName = {
+      "com.api.audit.config.LoggingJpaConfig",
+      "com.api.audit.storage.jdbc.JdbcAuditLogAutoConfiguration",
+      "com.api.audit.storage.memory.MemoryAuditLogAutoConfiguration",
+      "com.api.audit.storage.kafka.KafkaAuditLogAutoConfiguration"
+    })
 @EnableAsync
 @EnableScheduling
-@ComponentScan(basePackages = "com.api.audit")
 @EnableConfigurationProperties(AuditLoggingProperties.class)
-@ConditionalOnProperty(prefix = "audit.logging", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(
+    prefix = "audit.logging",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class LoggingAutoConfiguration {
@@ -65,32 +76,16 @@ public class LoggingAutoConfiguration {
   /** Prints the library banner on startup. */
   @PostConstruct
   public void printAuditBanner() {
-    System.out.println(
-        "\n\n  ,---.  ,------. ,--.   ,---.             ,--.,--.  ,--.   ,--.                      ,--.      "
-            + "          ");
-    System.out.println(
-        " /  O  \\ |  .--. '|  |  /  O  \\ ,--.,--. ,-|  |`--',-'  '-. |  |    ,---. ,---. ,---. "
-            + "`--',--,--,  ,---.  ");
-    System.out.println(
-        "|  .-.  ||  '--' ||  | |  .-.  ||  ||  |' .-. |,--.'-.  .-' |  |   | .-. | .-. | .-. |,--"
-            + ".|      \\| .-. | ");
-    System.out.println(
-        "|  | |  ||  | --' |  | |  | |  |'  ''  '\\ `-' ||  |  |  |   |  '--.' '-' ' '-' ' '-' '| "
-            + " ||  ||  |' '-' ' ");
-    System.out.println(
-        "`--' `--'`--'     `--' `--' `--' `----'  `---' `--'  `--'   `-----' `---'.`-  /.`-  / `--'`--''--'.`-  /  ");
-    System.out.println(
-        "                                                                         `---' `---'              `---'   ");
-    System.out.println("\nAudit Logging Module - Service Name: " + appName + "\n");
+    log.info("[AuditLog] Audit Logging Module ready for serviceName={}", appName);
     if ("unknown-service".equals(appName)) {
-      System.out.println("⚠️ WARN: spring.application.name is not set in the host service.\n");
+      log.warn("[AuditLog] spring.application.name is not set in the host service.");
     }
   }
 
   /** Registers the {@link AuditLogInterceptor} for all incoming web requests. */
   @Bean
-  public MappedInterceptor auditInterceptors(AuditLogInterceptor auditLogInterceptor) {
-    return new MappedInterceptor(new String[] {"/**"}, auditLogInterceptor);
+  public MappedInterceptor auditInterceptors(AuditLogInterceptor interceptor) {
+    return new MappedInterceptor(new String[] {"/**"}, interceptor);
   }
 
   /**
@@ -185,7 +180,7 @@ public class LoggingAutoConfiguration {
   /** Configures the filter responsible for intercepting and logging raw inbound HTTP traffic. */
   @Bean
   public IncomingLoggingFilter incomingLoggingFilter(ApplicationEventPublisher publisher) {
-    return new IncomingLoggingFilter(publisher, appName);
+    return new IncomingLoggingFilter(publisher, appName, properties);
   }
 
   /** Registers the {@link IncomingLoggingFilter} with highest precedence in the filter chain. */
@@ -193,55 +188,8 @@ public class LoggingAutoConfiguration {
   public FilterRegistrationBean<IncomingLoggingFilter> loggingFilterRegistration(
       IncomingLoggingFilter filter) {
     FilterRegistrationBean<IncomingLoggingFilter> bean = new FilterRegistrationBean<>(filter);
-    bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    bean.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
     return bean;
-  }
-
-  /** Provides a custom Feign logger to capture outbound communication. */
-  @Bean
-  public feign.Logger feignLogger(ApplicationEventPublisher p) {
-    return new CustomFeignLogger(p, appName);
-  }
-
-  /** Sets the Feign logging level to FULL. */
-  @Bean
-  public feign.Logger.Level feignLevel() {
-    return feign.Logger.Level.FULL;
-  }
-
-  /** Feign RequestInterceptor that propagates the correlation ID to outbound requests. */
-  @Bean
-  public RequestInterceptor correlationInterceptor() {
-    return template -> {
-      String id = MDC.get(CorrelationContext.CORRELATION_ID_HEADER);
-      if (id != null) template.header(CorrelationContext.CORRELATION_ID_HEADER, id);
-    };
-  }
-
-  /**
-   * Configures the Feign ErrorDecoder with auditing capability via the Decorator Pattern.
-   *
-   * <p>Activation: set {@code audit.logging.feign-error.enabled=true}.
-   */
-  @Bean
-  @Primary
-  @ConditionalOnProperty(
-      prefix = "audit.logging.feign-error",
-      name = "enabled",
-      havingValue = "true",
-      matchIfMissing = false)
-  public ErrorDecoder errorDecoder(
-      ApplicationEventPublisher p,
-      java.util.List<ErrorDecoder> existingDecoders,
-      JsonMasker jsonMasker) {
-
-    ErrorDecoder serviceDecoder =
-        existingDecoders.stream()
-            .filter(d -> !(d instanceof CustomFeignErrorDecoder))
-            .findFirst()
-            .orElse(new ErrorDecoder.Default());
-
-    return new CustomFeignErrorDecoder(p, appName, serviceDecoder, jsonMasker);
   }
 
   /**
@@ -256,7 +204,34 @@ public class LoggingAutoConfiguration {
     FilterRegistrationBean<AuditLogSecurityFilter> registration =
         new FilterRegistrationBean<>(filter);
     registration.addUrlPatterns("/internal/audit-logs*");
-    registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return registration;
+  }
+
+  /** Registers the internal audit log controller. */
+  @Bean
+  @ConditionalOnBean(AuditLogSearchStore.class)
+  public ApiLogController apiLogController(AuditLogSearchStore searchStore) {
+    return new ApiLogController(searchStore);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  public JsonMasker jsonMasker() {
+    return new JsonMasker(properties);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  public AuditLogInterceptor auditLogInterceptor(ApplicationEventPublisher publisher) {
+    return new AuditLogInterceptor(publisher);
+  }
+
+  @Bean
+  @ConditionalOnBean(com.api.audit.spi.AuditLogStore.class)
+  @ConditionalOnMissingBean
+  public ApiLogListener apiLogListener(
+      com.api.audit.spi.AuditLogStore store, JsonMasker jsonMasker) {
+    return new ApiLogListener(store, jsonMasker);
   }
 }
