@@ -9,7 +9,7 @@ little application code. The library keeps the capture flow non-invasive: annota
 you care about, let the starter publish audit events, mask sensitive payload fields, and send the
 records to the storage sink you choose.
 
-![Architectural Visual Flow](./assets/architectural-workflow.png)
+![Architectural Visual Flow](./assets/architectural-workflow.svg)
 
 ## What It Captures
 
