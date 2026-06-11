@@ -36,8 +36,8 @@ public interface ApiAuditLogRepository
    * policies and prevent the audit table from growing indefinitely.
    *
    * @param cutoff the point in time before which all logs will be removed
-   * @implNote This is a derived delete query. For large datasets, ensure this is called within a
-   *     transactional context and monitor performance.
+   *     <p><b>Implementation note:</b> This is a derived delete query. For large datasets, call it
+   *     within a transactional context and monitor performance.
    */
   void deleteByTimestampBefore(LocalDateTime cutoff);
 }

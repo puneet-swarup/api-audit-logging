@@ -10,6 +10,10 @@ dependencies {
     // Client modules compileOnly — same pattern
     compileOnly project(':api-audit-logging-client-webclient')
     compileOnly project(':api-audit-logging-client-resttemplate')
+
+    // Optional metrics bridge. Services without Micrometer use the no-op metrics implementation.
+    compileOnly 'io.micrometer:micrometer-core'
+    testImplementation 'io.micrometer:micrometer-core'
 }
 
 jar { enabled = true; archiveClassifier.set('') }

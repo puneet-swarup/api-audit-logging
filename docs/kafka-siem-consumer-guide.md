@@ -25,8 +25,8 @@ Add the Kafka storage module:
 
 ```gradle
 dependencies {
-    implementation "com.api.audit:api-audit-logging-autoconfigure:2.0.0"
-    implementation "com.api.audit:api-audit-logging-storage-kafka:2.0.0"
+    implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
+    implementation "com.api.audit:api-audit-logging-storage-kafka:2.2.0"
 }
 ```
 
@@ -161,4 +161,3 @@ Kafka is intentionally a write sink. It does not power `/internal/audit-logs` by
 
 Use Kafka alone when a central platform owns querying and retention. Pair Kafka with JPA, JDBC, or a
 custom `AuditLogSearchStore` when the application should also expose local audit search.
-

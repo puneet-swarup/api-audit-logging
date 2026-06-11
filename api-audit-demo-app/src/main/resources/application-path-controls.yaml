@@ -1,0 +1,7 @@
+audit:
+  logging:
+    capture:
+      included-paths:
+        - /api/**
+      excluded-paths:
+        - /api/v1/demo/no-audit/**

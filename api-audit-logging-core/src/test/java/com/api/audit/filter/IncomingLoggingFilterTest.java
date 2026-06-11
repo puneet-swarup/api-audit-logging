@@ -156,6 +156,41 @@ class IncomingLoggingFilterTest {
   }
 
   @Test
+  @DisplayName("GIVEN path is excluded WHEN filter runs THEN request passes without audit capture")
+  void excludedPathSkipsInboundAuditCapture() throws ServletException, IOException {
+    AuditLoggingProperties properties = new AuditLoggingProperties();
+    properties.getCapture().getExcludedPaths().add("/actuator/**");
+    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilter(request, response, chain);
+
+    verify(chain).doFilter(request, response);
+    verify(publisher, never()).publishEvent(any(ApiLogEvent.class));
+  }
+
+  @Test
+  @DisplayName(
+      "GIVEN path is outside include list WHEN filter runs THEN request passes without audit capture")
+  void nonIncludedPathSkipsInboundAuditCapture() throws ServletException, IOException {
+    AuditLoggingProperties properties = new AuditLoggingProperties();
+    properties
+        .getCapture()
+        .setIncludedPaths(new java.util.ArrayList<>(java.util.List.of("/api/**")));
+    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/internal/status");
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilter(request, response, chain);
+
+    verify(chain).doFilter(request, response);
+    verify(publisher, never()).publishEvent(any(ApiLogEvent.class));
+  }
+
+  @Test
   @DisplayName("GIVEN audited request fails WHEN filter exits THEN publishes error metadata")
   void capturesErrorMetadataWhenRequestFails() throws ServletException, IOException {
     MockHttpServletRequest request = new MockHttpServletRequest("GET", "/fail");

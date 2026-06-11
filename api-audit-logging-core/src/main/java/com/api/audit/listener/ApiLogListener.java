@@ -3,6 +3,7 @@ package com.api.audit.listener;
 import com.api.audit.event.ApiLogEvent;
 import com.api.audit.model.AuditLogRecord;
 import com.api.audit.spi.AuditLogStore;
+import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.JsonMasker;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class ApiLogListener {
 
   private final AuditLogStore auditLogStore;
   private final JsonMasker jsonMasker;
+  private final AuditMetrics auditMetrics;
 
   /**
    * Processes and persists the captured audit data asynchronously.
@@ -49,40 +51,43 @@ public class ApiLogListener {
   public void handleLog(ApiLogEvent event) {
     AuditLogRecord original = event.record();
 
-    // Build a new immutable record with masked bodies.
-    // AuditLogRecord is immutable (@Value) so we rebuild using the builder.
-    AuditLogRecord masked =
-        AuditLogRecord.builder()
-            .serviceName(original.getServiceName())
-            .type(original.getType())
-            .method(original.getMethod())
-            .description(original.getDescription())
-            .url(original.getUrl())
-            .queryString(original.getQueryString())
-            .requestHeaders(original.getRequestHeaders())
-            .responseHeaders(original.getResponseHeaders())
-            .requestBody(jsonMasker.mask(original.getRequestBody()))
-            .responseBody(jsonMasker.mask(original.getResponseBody()))
-            .httpStatus(original.getHttpStatus())
-            .duration(original.getDuration())
-            .correlationId(original.getCorrelationId())
-            .clientIp(original.getClientIp())
-            .userAgent(original.getUserAgent())
-            .principalName(original.getPrincipalName())
-            .errorType(original.getErrorType())
-            .errorMessage(original.getErrorMessage())
-            .timestamp(original.getTimestamp())
-            .build();
-
+    long started = System.currentTimeMillis();
     try {
+      AuditLogRecord masked = mask(original);
       auditLogStore.save(masked);
+      auditMetrics.recordSaved(masked, System.currentTimeMillis() - started);
     } catch (Exception e) {
       // Audit failure must NEVER propagate to the calling request thread.
+      auditMetrics.recordFailure(original, e);
       log.error(
           "[AuditLog] Failed to persist audit record for correlationId={}: {}",
           original.getCorrelationId(),
           e.getMessage(),
           e);
     }
+  }
+
+  private AuditLogRecord mask(AuditLogRecord original) {
+    return AuditLogRecord.builder()
+        .serviceName(original.getServiceName())
+        .type(original.getType())
+        .method(original.getMethod())
+        .description(original.getDescription())
+        .url(original.getUrl())
+        .queryString(original.getQueryString())
+        .requestHeaders(original.getRequestHeaders())
+        .responseHeaders(original.getResponseHeaders())
+        .requestBody(jsonMasker.mask(original.getRequestBody()))
+        .responseBody(jsonMasker.mask(original.getResponseBody()))
+        .httpStatus(original.getHttpStatus())
+        .duration(original.getDuration())
+        .correlationId(original.getCorrelationId())
+        .clientIp(original.getClientIp())
+        .userAgent(original.getUserAgent())
+        .principalName(original.getPrincipalName())
+        .errorType(original.getErrorType())
+        .errorMessage(original.getErrorMessage())
+        .timestamp(original.getTimestamp())
+        .build();
   }
 }

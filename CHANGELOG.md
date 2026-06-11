@@ -1,3 +1,23 @@
+### [2.2.0] - 2026-06-12
+
+- Upgraded the supported baseline to Spring Boot 3.5.15 and Spring Cloud 2025.0.3
+- Centralized build, BOM, Lombok, Spotless, SonarQube, and test dependency versions in `gradle.properties`
+- Removed hardcoded Spring Cloud OpenFeign versions so the Spring Cloud BOM owns the compatible client stack
+- Upgraded Lombok to 1.18.46, Spotless to 8.6.0, SonarQube Gradle plugin to 7.3.1.8318, and Awaitility to 4.3.0
+- Added the BOM-aligned JUnit Platform launcher to every module's test runtime
+- Refreshed README and Kafka consumer examples for the 2.2.0 dependency snippets
+
+### [2.1.0] - 2026-06-02
+
+- Added inbound path include/exclude controls with Ant-style patterns
+- Added optional Micrometer audit metrics for saved records, failed records, and store duration
+- Added no-op audit metrics fallback for applications without Micrometer
+- Added tests for path capture controls, metrics auto-configuration, and listener failure metrics
+- Added demo endpoints and integration tests for Feign, WebClient, RestClient, HTTP interfaces, and path-control behavior
+- Expanded Spring Boot configuration metadata for path controls
+- Added source and Javadoc jars to published library artifacts
+- Refreshed README dependency snippets and production observability guidance for `2.1.0`
+
 ### [2.0.0] - 2026-05-25
 
 - Reworked the project into a modular Spring Boot starter layout

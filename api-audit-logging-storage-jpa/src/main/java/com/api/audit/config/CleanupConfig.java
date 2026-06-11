@@ -35,7 +35,9 @@ public class CleanupConfig {
    * <p>Schedule is controlled by {@code audit.logging.cleanup.cron} (default: daily at 2 AM).
    * Retention period is controlled by {@code audit.logging.cleanup.days} (default: 30).
    *
-   * @implNote Ensure the {@code timestamp} column is indexed for performance on large tables.
+   * <p><b>Implementation note:</b> Keep the {@code timestamp} column indexed for performance on
+   * large tables.
+   *
    * @see ApiAuditLogRepository#deleteByTimestampBefore(LocalDateTime)
    */
   @Scheduled(cron = "${audit.logging.cleanup.cron:0 0 2 * * *}")

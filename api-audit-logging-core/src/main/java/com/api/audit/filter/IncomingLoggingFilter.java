@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
@@ -45,6 +46,13 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
   private final ApplicationEventPublisher publisher;
   private final String appName;
   private final AuditLoggingProperties properties;
+  private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+  @Override
+  protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getRequestURI();
+    return isExcluded(path) || !isIncluded(path);
+  }
 
   @Override
   protected void doFilterInternal(
@@ -78,6 +86,16 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
     boolean isUpload =
         isMultipart || "POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method);
     return (isUpload && !isMultipart) ? new EagerRequestWrapper(req) : req;
+  }
+
+  private boolean isIncluded(String path) {
+    return properties.getCapture().getIncludedPaths().stream()
+        .anyMatch(pattern -> pathMatcher.match(pattern, path));
+  }
+
+  private boolean isExcluded(String path) {
+    return properties.getCapture().getExcludedPaths().stream()
+        .anyMatch(pattern -> pathMatcher.match(pattern, path));
   }
 
   private void initializeMdc(HttpServletRequest req) {

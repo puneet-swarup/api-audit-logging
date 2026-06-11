@@ -6,6 +6,7 @@ import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.interceptor.AuditLogInterceptor;
 import com.api.audit.listener.ApiLogListener;
 import com.api.audit.spi.AuditLogSearchStore;
+import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.JsonMasker;
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.Executor;
@@ -231,7 +232,7 @@ public class LoggingAutoConfiguration {
   @ConditionalOnBean(com.api.audit.spi.AuditLogStore.class)
   @ConditionalOnMissingBean
   public ApiLogListener apiLogListener(
-      com.api.audit.spi.AuditLogStore store, JsonMasker jsonMasker) {
-    return new ApiLogListener(store, jsonMasker);
+      com.api.audit.spi.AuditLogStore store, JsonMasker jsonMasker, AuditMetrics auditMetrics) {
+    return new ApiLogListener(store, jsonMasker, auditMetrics);
   }
 }

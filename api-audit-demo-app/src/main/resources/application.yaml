@@ -53,3 +53,4 @@ audit:
 demo:
   downstream:
     status-url: ${DEMO_DOWNSTREAM_STATUS_URL:https://localhost.invalid/api/v1/status?source=demo}
+    base-url: ${DEMO_DOWNSTREAM_BASE_URL:https://localhost.invalid}

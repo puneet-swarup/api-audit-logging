@@ -1,1 +1,3 @@
+com.api.audit.config.MicrometerAuditMetricsAutoConfiguration
+com.api.audit.config.AuditMetricsAutoConfiguration
 com.api.audit.config.LoggingAutoConfiguration

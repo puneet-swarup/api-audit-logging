@@ -7,6 +7,9 @@ import static org.mockito.Mockito.mock;
 
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.listener.ApiLogListener;
+import com.api.audit.spi.AuditMetrics;
+import com.api.audit.spi.NoOpAuditMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +25,11 @@ class LoggingAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(LoggingAutoConfiguration.class));
+          .withConfiguration(
+              AutoConfigurations.of(
+                  MicrometerAuditMetricsAutoConfiguration.class,
+                  AuditMetricsAutoConfiguration.class,
+                  LoggingAutoConfiguration.class));
 
   @BeforeEach
   void setUp() {
@@ -68,6 +75,7 @@ class LoggingAutoConfigurationTest {
             context -> {
               assertThat(context).doesNotHaveBean(LoggingAutoConfiguration.class);
               assertThat(context).doesNotHaveBean("logExecutor");
+              assertThat(context).doesNotHaveBean(AuditMetrics.class);
             });
   }
 
@@ -81,5 +89,28 @@ class LoggingAutoConfigurationTest {
           assertThat(context).doesNotHaveBean(ApiLogListener.class);
           assertThat(context).doesNotHaveBean(com.api.audit.controller.ApiLogController.class);
         });
+  }
+
+  @Test
+  @DisplayName("GIVEN no MeterRegistry WHEN context loads THEN no-op audit metrics are registered")
+  void shouldRegisterNoOpMetricsWhenMicrometerRegistryIsAbsent() {
+    contextRunner.run(
+        context -> {
+          assertThat(context).hasSingleBean(AuditMetrics.class);
+          assertThat(context).hasSingleBean(NoOpAuditMetrics.class);
+        });
+  }
+
+  @Test
+  @DisplayName(
+      "GIVEN MeterRegistry WHEN context loads THEN Micrometer audit metrics are registered")
+  void shouldRegisterMicrometerMetricsWhenRegistryIsPresent() {
+    contextRunner
+        .withBean(SimpleMeterRegistry.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(AuditMetrics.class);
+              assertThat(context).hasSingleBean(MicrometerAuditMetrics.class);
+            });
   }
 }

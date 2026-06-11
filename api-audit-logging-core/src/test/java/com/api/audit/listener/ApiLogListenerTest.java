@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.api.audit.event.ApiLogEvent;
 import com.api.audit.model.AuditLogRecord;
 import com.api.audit.spi.AuditLogStore;
+import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.JsonMasker;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ class ApiLogListenerTest {
 
   @Mock private AuditLogStore auditLogStore;
   @Mock private JsonMasker jsonMasker;
+  @Mock private AuditMetrics auditMetrics;
   @InjectMocks private ApiLogListener listener;
 
   @Test
@@ -51,6 +53,7 @@ class ApiLogListenerTest {
                 saved ->
                     saved.getRequestBody().contains("******")
                         && saved.getResponseBody().contains("******")));
+    verify(auditMetrics).recordSaved(any(AuditLogRecord.class), anyLong());
   }
 
   @Test
@@ -72,5 +75,31 @@ class ApiLogListenerTest {
 
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(
         () -> listener.handleLog(new ApiLogEvent(record)));
+    verify(auditMetrics).recordFailure(eq(record), any(RuntimeException.class));
+  }
+
+  @Test
+  @DisplayName("GIVEN masking throws WHEN handleLog THEN failure metric is recorded")
+  void testHandleLog_maskingFailure_recordsMetric() {
+    AuditLogRecord record =
+        AuditLogRecord.builder()
+            .serviceName("svc")
+            .type("INCOMING")
+            .method("POST")
+            .url("/test")
+            .requestBody("{\"password\":\"secret\"}")
+            .httpStatus(200)
+            .correlationId("masking-failure")
+            .timestamp(LocalDateTime.now())
+            .build();
+
+    RuntimeException failure = new RuntimeException("masking failed");
+    when(jsonMasker.mask(record.getRequestBody())).thenThrow(failure);
+
+    org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+        () -> listener.handleLog(new ApiLogEvent(record)));
+
+    verify(auditLogStore, never()).save(any());
+    verify(auditMetrics).recordFailure(record, failure);
   }
 }

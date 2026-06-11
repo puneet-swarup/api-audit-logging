@@ -1,8 +1,8 @@
 plugins {
-    id 'org.springframework.boot' version '3.4.1' apply false
+    id 'org.springframework.boot' version "${springBootVersion}" apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
-    id 'com.diffplug.spotless' version '7.0.2' apply false
-    id 'org.sonarqube' version '6.0.1.5171' apply false
+    id 'com.diffplug.spotless' version "${spotlessPluginVersion}" apply false
+    id 'org.sonarqube' version "${sonarqubePluginVersion}" apply false
 }
 
 subprojects {
@@ -11,8 +11,8 @@ subprojects {
 
     dependencyManagement {
         imports {
-            mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.1"
-            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.0"
+            mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
         }
     }
 
@@ -31,11 +31,12 @@ subprojects {
     }
 
     dependencies {
-        compileOnly 'org.projectlombok:lombok:1.18.36'
-        annotationProcessor 'org.projectlombok:lombok:1.18.36'
+        compileOnly "org.projectlombok:lombok:${lombokVersion}"
+        annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
-        testCompileOnly 'org.projectlombok:lombok:1.18.36'
-        testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
+        testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+        testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 
     tasks.named('test') {
@@ -48,6 +49,11 @@ configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
     apply plugin: 'jacoco'
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'maven-publish'
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
 
     dependencies {
         annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -79,6 +85,8 @@ configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
                     }
                 }
                 pom {
+                    name = project.name
+                    description = 'Spring Boot starter modules for inbound and outbound API audit logging'
                     url = 'https://github.com/puneet-swarup/api-audit-logging-parent'
                     licenses {
                         license {

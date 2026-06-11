@@ -68,8 +68,6 @@ public class AuditLoggingProperties {
 
   @NestedConfigurationProperty private Masking masking = new Masking();
 
-  // ─── Nested configuration classes ────────────────────────────────────────
-
   /** Configuration for the asynchronous {@code logExecutor} thread pool. */
   @Getter
   @Setter
@@ -84,7 +82,7 @@ public class AuditLoggingProperties {
     /**
      * Capacity of the bounded task queue.
      *
-     * <p>Tune this to: {@code peak_requests_per_second × avg_db_write_ms / 1000}. Default: {@code
+     * <p>Tune this to: {@code peak_requests_per_second * avg_db_write_ms / 1000}. Default: {@code
      * 1000}.
      */
     private int queueCapacity = 1000;
@@ -93,10 +91,10 @@ public class AuditLoggingProperties {
      * Policy applied when the executor queue is full.
      *
      * <ul>
-     *   <li>{@code CALLER_RUNS} — no record lost; caller thread pays latency (default)
-     *   <li>{@code DISCARD_OLDEST} — oldest queued record dropped; zero caller latency
-     *   <li>{@code DISCARD} — incoming record dropped; zero caller latency
-     *   <li>{@code ABORT} — throws RejectedExecutionException
+     *   <li>{@code CALLER_RUNS} - no record lost; caller thread pays latency (default)
+     *   <li>{@code DISCARD_OLDEST} - oldest queued record dropped; zero caller latency
+     *   <li>{@code DISCARD} - incoming record dropped; zero caller latency
+     *   <li>{@code ABORT} - throws RejectedExecutionException
      * </ul>
      *
      * Default: {@code CALLER_RUNS}.
@@ -123,6 +121,22 @@ public class AuditLoggingProperties {
      * <p>Headers are redacted before this limit is applied. Default: {@code 20000}.
      */
     private int maxHeaderSize = 20_000;
+
+    /**
+     * Ant-style request path patterns allowed for inbound capture.
+     *
+     * <p>The default {@code /**} keeps existing behavior. Use this when a service wants auditing
+     * only for a known API surface, for example {@code /api/**}.
+     */
+    private List<String> includedPaths = new ArrayList<>(List.of("/**"));
+
+    /**
+     * Ant-style request path patterns excluded from inbound capture.
+     *
+     * <p>Exclusions win over inclusions. This is useful for health checks, static assets, or
+     * endpoints whose payloads should never be copied into an audit record.
+     */
+    private List<String> excludedPaths = new ArrayList<>();
   }
 
   /** Configuration for automated audit log data retention and cleanup. */

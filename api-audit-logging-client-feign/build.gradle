@@ -1,6 +1,6 @@
 dependencies {
     api project(':api-audit-logging-core')
-    api 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.0'
+    api 'org.springframework.cloud:spring-cloud-starter-openfeign'
 }
 
 jar { enabled = true; archiveClassifier.set('') }

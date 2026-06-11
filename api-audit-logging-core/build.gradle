@@ -4,7 +4,7 @@ dependencies {
 
     // Feign compileOnly — core defines annotation that Feign clients use,
     // but does not force Feign onto consumers/host who don't use it
-    compileOnly 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.0'
+    compileOnly 'org.springframework.cloud:spring-cloud-starter-openfeign'
     // Spring Data Commons needed for Page<> in AuditLogSearchStore SPI
     api 'org.springframework.data:spring-data-commons'
 }

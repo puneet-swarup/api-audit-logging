@@ -25,6 +25,18 @@
       "defaultValue": 20000
     },
     {
+      "name": "audit.logging.capture.included-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Ant-style inbound request path patterns allowed for audit capture. Defaults to all paths so existing applications keep the same behavior.",
+      "defaultValue": ["/**"]
+    },
+    {
+      "name": "audit.logging.capture.excluded-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Ant-style inbound request path patterns excluded from audit capture. Exclusions win over included paths and are useful for health checks, static assets, or endpoints that should never be copied into audit records.",
+      "defaultValue": []
+    },
+    {
       "name": "audit.logging.storage.type",
       "type": "java.lang.String",
       "description": "Preferred built-in storage implementation when more than one storage module is present. Supported values are jpa, jdbc, memory, and kafka. Direct storage modules require this value explicitly; the starter supplies jpa as its convenience default.",
@@ -78,6 +90,32 @@
         {
           "value": "kafka",
           "description": "Publish audit records to Kafka as a write-only stream sink."
+        }
+      ]
+    },
+    {
+      "name": "audit.logging.capture.included-paths",
+      "values": [
+        {
+          "value": "/api/**",
+          "description": "Capture only application API endpoints."
+        },
+        {
+          "value": "/**",
+          "description": "Capture every audited inbound endpoint."
+        }
+      ]
+    },
+    {
+      "name": "audit.logging.capture.excluded-paths",
+      "values": [
+        {
+          "value": "/actuator/**",
+          "description": "Skip Spring Boot actuator endpoints."
+        },
+        {
+          "value": "/internal/**",
+          "description": "Skip internal operational endpoints."
         }
       ]
     }

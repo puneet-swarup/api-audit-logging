@@ -73,16 +73,16 @@ public class ApiAuditLog {
   /**
    * The raw request payload.
    *
-   * @implNote Mapped as a JPA {@link Lob} so each database dialect can choose the right large-text
-   *     type.
+   * <p><b>Implementation note:</b> Mapped as a JPA {@link Lob} so each database dialect can choose
+   * the right large-text type.
    */
   @Lob private String requestBody;
 
   /**
    * The raw response payload.
    *
-   * @implNote Mapped as a JPA {@link Lob} so each database dialect can choose the right large-text
-   *     type.
+   * <p><b>Implementation note:</b> Mapped as a JPA {@link Lob} so each database dialect can choose
+   * the right large-text type.
    */
   @Lob private String responseBody;
 
