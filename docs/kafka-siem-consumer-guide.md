@@ -25,8 +25,8 @@ Add the Kafka storage module:
 
 ```gradle
 dependencies {
-    implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
-    implementation "com.api.audit:api-audit-logging-storage-kafka:2.2.0"
+    implementation "io.github.puneet-swarup:api-audit-logging-autoconfigure:2.2.0"
+    implementation "io.github.puneet-swarup:api-audit-logging-storage-kafka:2.2.0"
 }
 ```
 

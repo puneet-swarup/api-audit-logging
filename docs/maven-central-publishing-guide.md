@@ -12,10 +12,10 @@ created accidentally during normal release tagging.
 4. Create a GPG key for artifact signing and publish the public key.
 5. Add the required GitHub repository secrets.
 
-The current groupId is `com.api.audit`. Maven Central requires that namespace to be verified before
-release artifacts can be accepted. If that namespace cannot be verified, choose a new groupId before
-the first Maven Central release. A GitHub-backed namespace such as `io.github.puneet-swarup` is a
-common option, but changing it later would change every dependency coordinate for users.
+The project uses the GitHub-backed groupId `io.github.puneet-swarup`. Verify this namespace in the
+Maven Central Portal before the first Central release. This groupId is intentionally separate from
+the Java package names such as `com.api.audit`; Maven coordinates and Java packages do not need to
+match.
 
 ## Required GitHub Secrets
 

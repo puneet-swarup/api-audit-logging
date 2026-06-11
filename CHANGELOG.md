@@ -6,6 +6,7 @@
 - Upgraded Lombok to 1.18.46, Spotless to 8.6.0, SonarQube Gradle plugin to 7.3.1.8318, and Awaitility to 4.3.0
 - Added the BOM-aligned JUnit Platform launcher to every module's test runtime
 - Added Maven Central-ready publishing wiring with signed manual Central deployments
+- Changed published coordinates to the Maven Central-verifiable `io.github.puneet-swarup` groupId
 - Refreshed README and Kafka consumer examples for the 2.2.0 dependency snippets
 
 ### [2.1.0] - 2026-06-02

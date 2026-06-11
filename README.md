@@ -32,7 +32,7 @@ Use the starter when you want the opinionated default setup:
 
 ```gradle
 dependencies {
-    implementation "com.api.audit:api-audit-logging-starter:2.2.0"
+    implementation "io.github.puneet-swarup:api-audit-logging-starter:2.2.0"
 }
 ```
 
@@ -85,8 +85,8 @@ response is available, published as an event, masked, and persisted asynchronous
 JPA is the default storage in `api-audit-logging-starter`.
 
 ```gradle
-implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
-implementation "com.api.audit:api-audit-logging-storage-jpa:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-autoconfigure:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-storage-jpa:2.2.0"
 ```
 
 Enable the library migration path if you want Flyway to create the audit table:
@@ -119,8 +119,8 @@ copy the matching DDL into your own migration chain.
 Use JDBC when you want database-backed audit logs without JPA:
 
 ```gradle
-implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
-implementation "com.api.audit:api-audit-logging-storage-jdbc:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-autoconfigure:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-storage-jdbc:2.2.0"
 ```
 
 JDBC uses the same table shape as JPA and also supports the internal search endpoint.
@@ -139,8 +139,8 @@ audit:
 Use memory storage for demos, local experiments, and tests:
 
 ```gradle
-implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
-implementation "com.api.audit:api-audit-logging-storage-memory:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-autoconfigure:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-storage-memory:2.2.0"
 ```
 
 Records are lost when the application stops.
@@ -159,8 +159,8 @@ audit:
 Use Kafka when audit records should flow into a stream processor, SIEM, or central data platform:
 
 ```gradle
-implementation "com.api.audit:api-audit-logging-autoconfigure:2.2.0"
-implementation "com.api.audit:api-audit-logging-storage-kafka:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-autoconfigure:2.2.0"
+implementation "io.github.puneet-swarup:api-audit-logging-storage-kafka:2.2.0"
 ```
 
 Kafka is opt-in:
