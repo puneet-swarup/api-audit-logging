@@ -28,7 +28,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build and publish
-        run: ./gradlew publish
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # auto-injected by Actions
           GITHUB_ACTOR: ${{ github.actor }}

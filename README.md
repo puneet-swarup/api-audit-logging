@@ -181,6 +181,9 @@ or provide your own `AuditLogSearchStore`.
 For downstream consumers, SIEM indexing, alert examples, and topic design, see the
 [Kafka and SIEM Consumer Guide](docs/kafka-siem-consumer-guide.md).
 
+For Maven Central release setup, see the
+[Maven Central Publishing Guide](docs/maven-central-publishing-guide.md).
+
 ## Client Integrations
 
 ### Feign

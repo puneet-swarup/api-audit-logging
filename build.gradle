@@ -2,6 +2,7 @@ plugins {
     id 'org.springframework.boot' version "${springBootVersion}" apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
     id 'com.diffplug.spotless' version "${spotlessPluginVersion}" apply false
+    id 'com.vanniktech.maven.publish.base' version "${vanniktechMavenPublishVersion}" apply false
     id 'org.sonarqube' version "${sonarqubePluginVersion}" apply false
 }
 
@@ -48,12 +49,7 @@ subprojects {
 configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
     apply plugin: 'jacoco'
     apply plugin: 'com.diffplug.spotless'
-    apply plugin: 'maven-publish'
-
-    java {
-        withSourcesJar()
-        withJavadocJar()
-    }
+    apply plugin: 'com.vanniktech.maven.publish.base'
 
     dependencies {
         annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -72,38 +68,50 @@ configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
         dependsOn(tasks.named("spotlessApply"))
     }
 
+    mavenPublishing {
+        configureBasedOnAppliedPlugins()
+        coordinates(project.group.toString(), project.name, project.version.toString())
+        pom {
+            name = project.name
+            description = 'Spring Boot starter modules for inbound and outbound API audit logging'
+            inceptionYear = '2026'
+            url = 'https://github.com/puneet-swarup/api-audit-logging'
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution = 'repo'
+                }
+            }
+            developers {
+                developer {
+                    id = 'puneet-swarup'
+                    name = 'Puneet Swarup'
+                    url = 'https://github.com/puneet-swarup'
+                }
+            }
+            scm {
+                url = 'https://github.com/puneet-swarup/api-audit-logging'
+                connection = 'scm:git:git://github.com/puneet-swarup/api-audit-logging.git'
+                developerConnection = 'scm:git:ssh://git@github.com/puneet-swarup/api-audit-logging.git'
+            }
+        }
+
+        if (project.findProperty('enableMavenCentral') == 'true') {
+            publishToMavenCentral()
+            signAllPublications()
+        }
+    }
+
     publishing {
         publications {
-            mavenJava(MavenPublication) {
-                from components.java
+            withType(MavenPublication).configureEach {
                 versionMapping {
                     usage('java-api') {
                         fromResolutionOf('runtimeClasspath')
                     }
                     usage('java-runtime') {
                         fromResolutionResult()
-                    }
-                }
-                pom {
-                    name = project.name
-                    description = 'Spring Boot starter modules for inbound and outbound API audit logging'
-                    url = 'https://github.com/puneet-swarup/api-audit-logging-parent'
-                    licenses {
-                        license {
-                            name = 'Apache License 2.0'
-                            url = 'https://www.apache.org/licenses/LICENSE-2.0'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id = 'puneet-swarup'
-                            name = 'Puneet Swarup'
-                            url = 'https://www.linkedin.com/in/puneet-swarup/'
-                        }
-                    }
-                    scm {
-                        url = 'https://github.com/puneet-swarup/api-audit-logging-parent'
-                        connection = 'scm:git:git://github.com/puneet-swarup/api-audit-logging-parent.git'
                     }
                 }
             }
