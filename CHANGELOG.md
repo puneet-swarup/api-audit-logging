@@ -1,4 +1,4 @@
-### [Unreleased]
+### [2.3.0] - 2026-10-06
 
 - Replaced regex-based masking with a JSON-tree `PayloadMasker` SPI and default `JsonTreePayloadMasker` that correctly masks nested objects, arrays, and non-string values without corrupting payloads; `JsonMasker` is retained as a delegating facade
 - Hardened the internal endpoint security filter with constant-time API-key comparison and exact/child path matching
