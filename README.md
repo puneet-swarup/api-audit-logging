@@ -78,6 +78,60 @@ class UserController {
 Method-level annotations win over class-level annotations. Inbound records are captured after the
 response is available, published as an event, masked, and persisted asynchronously.
 
+## Path-Based Auditing (No Code Changes)
+
+You can audit API traffic without annotating controllers at all. Declare the paths you care about in configuration, add the library, and restart the JVM - no application code changes are required. This is the recommended mode when you want auditing to be a deployment concern rather than something threaded through the codebase.
+
+Step 1 - enable path-based auditing and declare rules in application.yml. This example audits payment APIs with tags, captures only metadata for orders, restricts a rule to mutation methods, and explicitly excludes the health surface:
+
+    audit:
+      logging:
+        enabled: true
+        policies:
+          path-based:
+            enabled: true
+            rules:
+              - pattern: /api/v1/payments/**
+                description: Payment APIs
+                tags:
+                  module: payments
+                  tier: critical
+              - pattern: /api/v1/orders/**
+                capture: METADATA_ONLY
+              - pattern: /api/v1/accounts/**
+                methods: [POST, PUT, PATCH]
+                description: Account mutations
+              - pattern: /actuator/**
+                audit: false
+
+Step 2 - restart the JVM. That is the entire change.
+
+Key points:
+
+- Annotation-based auditing keeps working and stays enabled by default. The two modes coexist.
+- When both an annotation and a path rule match, the annotation supplies the description and tags.
+- An explicit audit: false rule always wins over any positive rule.
+- Rules are ranked by specificity, so a broad /** rule will not shadow a precise one.
+- pattern uses Ant syntax by default; set matcher: REGEX to use a regular expression instead.
+- capture can be FULL (default), METADATA_ONLY, or BODY_ONLY.
+
+To run purely from configuration, disable the annotation policy:
+
+    audit:
+      logging:
+        policies:
+          annotation:
+            enabled: false
+          path-based:
+            enabled: true
+            rules:
+              - pattern: /api/**
+                description: All APIs
+
+See the [Path-Based Auditing Guide](docs/path-based-auditing-guide.md) for the full rule reference, precedence details, capture modes, tags, custom policies, and troubleshooting. The demo app ships a path-based profile that proves the zero-code-change flow against an unannotated controller:
+
+    .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-based"
+
 ## Storage Choices
 
 ### JPA
@@ -231,11 +285,14 @@ The sample app includes profiles that show the same API capture flow with differ
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=memory"
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=kafka"
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-controls"
+.\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-based"
 ```
 
-The `jpa`, `jdbc`, and `memory` profiles expose `/internal/audit-logs` because they have searchable
-stores. The `kafka` profile publishes records to Kafka only; use `KAFKA_BOOTSTRAP_SERVERS` to point
-it at a broker.
+The `jpa`, `jdbc`, `memory`, and `path-based` profiles expose `/internal/audit-logs` because they
+have searchable stores. The `kafka` profile publishes records to Kafka only; use
+`KAFKA_BOOTSTRAP_SERVERS` to point it at a broker. The `path-based` profile demonstrates
+zero-code-change auditing against an unannotated controller; see the
+[demo app README](api-audit-demo-app/README.md) for the full endpoint map.
 
 Useful demo endpoints:
 
@@ -250,6 +307,11 @@ Useful demo endpoints:
 | `/api/v1/demo/restclient` | RestClient outbound capture |
 | `/api/v1/demo/http-interface` | HTTP interface client backed by audited RestClient |
 | `/api/v1/demo/no-audit/ping` | Path exclusion when `path-controls` profile is active |
+| `/api/v1/path-audited/hello` | Path-based capture with no annotation (`path-based` profile) |
+| `/api/v1/path-audited/metadata/ping` | `METADATA_ONLY` capture mode (`path-based` profile) |
+| `/api/v1/path-audited/body-only/echo` | `BODY_ONLY` capture mode (`path-based` profile) |
+| `/api/v1/path-audited/mutations` | Method-scoped rule, POST/PUT only (`path-based` profile) |
+| `/api/v1/path-audited/orders/42` | Regex matcher rule (`path-based` profile) |
 
 Set `DEMO_DOWNSTREAM_BASE_URL` or `DEMO_DOWNSTREAM_STATUS_URL` when you want the outbound examples to
 call a real local service instead of the placeholder URL.
@@ -282,6 +344,15 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.kafka.topic` | `api-audit-logs` | Kafka topic for audit records |
 | `audit.logging.internal.api-key` | none | API key for `/internal/audit-logs`; blank means fail-secure |
 | `audit.logging.masking.additional-fields` | `[]` | Extra JSON field names to redact |
+| `audit.logging.policies.annotation.enabled` | `true` | Evaluate the `@AuditLog` annotation policy |
+| `audit.logging.policies.path-based.enabled` | `false` | Enable configuration-driven path auditing |
+| `audit.logging.policies.path-based.rules[*].pattern` | none | Path pattern to match (required per rule) |
+| `audit.logging.policies.path-based.rules[*].matcher` | `ANT` | `ANT` or `REGEX` |
+| `audit.logging.policies.path-based.rules[*].audit` | `true` | `false` creates an explicit skip rule |
+| `audit.logging.policies.path-based.rules[*].methods` | `[]` | HTTP methods the rule applies to; empty means all |
+| `audit.logging.policies.path-based.rules[*].description` | derived | Description stored on matched records |
+| `audit.logging.policies.path-based.rules[*].capture` | `FULL` | `FULL`, `METADATA_ONLY`, or `BODY_ONLY` |
+| `audit.logging.policies.path-based.rules[*].tags` | `{}` | Custom key/value dimensions attached to records |
 
 ### Path Controls
 

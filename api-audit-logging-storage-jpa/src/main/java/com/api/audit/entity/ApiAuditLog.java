@@ -123,6 +123,13 @@ public class ApiAuditLog {
   /** Exception message or concise failure detail when the audited call fails. */
   @Lob private String errorMessage;
 
+  /**
+   * Custom key/value dimensions attached by a path-based rule or custom policy, serialized as a
+   * compact JSON object string. Kept as text so any database can store it without a JSON column
+   * type.
+   */
+  @Lob private String tags;
+
   /** The exact date and time the audit entry was recorded. */
   private LocalDateTime timestamp;
 }

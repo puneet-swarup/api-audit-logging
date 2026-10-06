@@ -1,6 +1,7 @@
 package com.api.audit.model;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Value;
 
@@ -101,4 +102,10 @@ public class AuditLogRecord {
 
   /** Exact timestamp when this record was captured. */
   LocalDateTime timestamp;
+
+  /**
+   * Custom key/value dimensions supplied by a path-based rule or a custom {@link
+   * com.api.audit.policy.AuditPolicy}. Never {@code null}; empty when no tags were configured.
+   */
+  @Builder.Default Map<String, String> tags = Map.of();
 }

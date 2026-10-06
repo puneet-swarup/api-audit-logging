@@ -1,6 +1,7 @@
 package com.api.audit.interceptor;
 
 import com.api.audit.annotation.AuditLog;
+import com.api.audit.context.AuditRequestAttributes;
 import com.api.audit.filter.IncomingLoggingFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -67,8 +68,8 @@ public class AuditLogInterceptor implements HandlerInterceptor {
       }
 
       if (annotation != null) {
-        request.setAttribute("AUDIT_LOG_ENABLED", true);
-        request.setAttribute("AUDIT_LOG_DESC", annotation.value());
+        request.setAttribute(AuditRequestAttributes.AUDIT_LOG_ENABLED, true);
+        request.setAttribute(AuditRequestAttributes.AUDIT_LOG_DESC, annotation.value());
       }
     }
 

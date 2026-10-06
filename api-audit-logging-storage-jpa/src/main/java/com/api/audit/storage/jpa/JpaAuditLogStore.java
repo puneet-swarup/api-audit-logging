@@ -54,6 +54,39 @@ public class JpaAuditLogStore implements AuditLogStore {
     entity.setErrorType(record.getErrorType());
     entity.setErrorMessage(record.getErrorMessage());
     entity.setTimestamp(record.getTimestamp());
+    entity.setTags(serializeTags(record.getTags()));
     return entity;
+  }
+
+  /**
+   * Serializes the tag map to a compact JSON object string without pulling a JSON library into this
+   * module. Keys and values are escaped minimally; tags are operator-controlled configuration, not
+   * untrusted user input, so a full JSON writer is not required here.
+   *
+   * @param tags the tag map; may be {@code null} or empty
+   * @return a JSON object string, or {@code null} when there are no tags
+   */
+  private String serializeTags(java.util.Map<String, String> tags) {
+    if (tags == null || tags.isEmpty()) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder("{");
+    boolean first = true;
+    for (java.util.Map.Entry<String, String> entry : tags.entrySet()) {
+      if (!first) {
+        sb.append(',');
+      }
+      first = false;
+      sb.append('"').append(escape(entry.getKey())).append("\":\"");
+      sb.append(escape(entry.getValue())).append('"');
+    }
+    return sb.append('}').toString();
+  }
+
+  private String escape(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 }

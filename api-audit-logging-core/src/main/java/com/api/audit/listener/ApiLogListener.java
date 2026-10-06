@@ -88,6 +88,7 @@ public class ApiLogListener {
         .errorType(original.getErrorType())
         .errorMessage(original.getErrorMessage())
         .timestamp(original.getTimestamp())
+        .tags(original.getTags())
         .build();
   }
 }

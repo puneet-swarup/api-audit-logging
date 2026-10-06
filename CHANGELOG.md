@@ -1,3 +1,17 @@
+### [Unreleased]
+
+- Added a pluggable audit policy engine (`AuditDecisionEngine`) that resolves one decision per request from one or more `AuditPolicy` sources
+- Added configuration-driven, zero-code-change path-based auditing via `audit.logging.policies.path-based.rules`
+- Added the `PathAuditPolicy` (Ant and regex matchers, method filters, specificity ranking, explicit skips) and the `AnnotationAuditPolicy` (preserves the existing `@AuditLog` flow)
+- Added the `AuditPolicy` SPI and `AuditDecision`/`CaptureMode` model, plus `AuditPolicyOrder` constants for custom policies
+- Added capture modes: `FULL`, `METADATA_ONLY`, and `BODY_ONLY`
+- Added a `tags` map to `AuditLogRecord`, persisted as JSON by the JPA and JDBC stores, with new `V1002` migrations for H2, PostgreSQL, MySQL, SQL Server, and Oracle
+- Added fail-fast JSR-380 validation to `AuditLoggingProperties`
+- Added `AuditRequestAttributes` to centralize request attribute keys
+- Added unit, auto-configuration, and end-to-end tests for path-based auditing, plus a `path-based` demo profile and an unannotated `PathAuditDemoController`
+- Added the Path-Based Auditing Guide and expanded the README with rule examples and the new configuration reference
+- Inbound capture now skips request/response wrapping entirely when no policy audits the request
+
 ### [2.2.0] - 2026-06-12
 
 - Upgraded the supported baseline to Spring Boot 3.5.15 and Spring Cloud 2025.0.3

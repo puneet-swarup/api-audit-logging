@@ -5,10 +5,15 @@ import com.api.audit.filter.AuditLogSecurityFilter;
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.interceptor.AuditLogInterceptor;
 import com.api.audit.listener.ApiLogListener;
+import com.api.audit.policy.AnnotationAuditPolicy;
+import com.api.audit.policy.AuditDecisionEngine;
+import com.api.audit.policy.AuditPolicy;
+import com.api.audit.policy.PathAuditPolicy;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.JsonMasker;
 import jakarta.annotation.PostConstruct;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -178,10 +183,42 @@ public class LoggingAutoConfiguration {
     };
   }
 
+  /**
+   * Registers the annotation-based policy. Enabled by default for backward compatibility with
+   * applications that annotate their controllers with {@code @AuditLog}.
+   */
+  @Bean
+  @ConditionalOnMissingBean(AnnotationAuditPolicy.class)
+  public AnnotationAuditPolicy annotationAuditPolicy() {
+    return new AnnotationAuditPolicy(properties.getPolicies().getAnnotation().isEnabled());
+  }
+
+  /**
+   * Registers the path-based policy. This is the zero-code-change mode: when enabled via {@code
+   * audit.logging.policies.path-based.enabled=true}, requests matching the configured rules are
+   * audited without any annotation or application code change.
+   */
+  @Bean
+  @ConditionalOnMissingBean(PathAuditPolicy.class)
+  public PathAuditPolicy pathAuditPolicy() {
+    return new PathAuditPolicy(properties);
+  }
+
+  /**
+   * Registers the decision engine that combines all {@link AuditPolicy} beans (built-in and custom)
+   * into a single decision per request.
+   */
+  @Bean
+  @ConditionalOnMissingBean(AuditDecisionEngine.class)
+  public AuditDecisionEngine auditDecisionEngine(List<AuditPolicy> policies) {
+    return new AuditDecisionEngine(policies);
+  }
+
   /** Configures the filter responsible for intercepting and logging raw inbound HTTP traffic. */
   @Bean
-  public IncomingLoggingFilter incomingLoggingFilter(ApplicationEventPublisher publisher) {
-    return new IncomingLoggingFilter(publisher, appName, properties);
+  public IncomingLoggingFilter incomingLoggingFilter(
+      ApplicationEventPublisher publisher, AuditDecisionEngine decisionEngine) {
+    return new IncomingLoggingFilter(publisher, appName, properties, decisionEngine);
   }
 
   /** Registers the {@link IncomingLoggingFilter} with highest precedence in the filter chain. */

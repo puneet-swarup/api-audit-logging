@@ -4,6 +4,12 @@ This file captures the next useful pieces of work for contributors. The library 
 inbound Spring MVC capture, Feign, RestTemplate, RestClient, WebClient metadata, JPA, JDBC, memory,
 and Kafka sinks. The items below are the next steps to make the project even stronger in production.
 
+## Delivered
+
+- Configuration-driven, zero-code-change path-based auditing (Phase 1). See the
+  [Path-Based Auditing Guide](docs/path-based-auditing-guide.md).
+- Pluggable `AuditPolicy` engine with `AuditDecision`, capture modes, and a custom-policy SPI.
+
 ## Near Term
 
 - Add Testcontainers coverage for PostgreSQL, MySQL/MariaDB, SQL Server, and Oracle-compatible

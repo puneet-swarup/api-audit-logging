@@ -69,6 +69,7 @@ class JdbcAuditLogStoreTest {
             principal_name VARCHAR(255),
             error_type VARCHAR(255),
             error_message CLOB,
+            tags CLOB,
             timestamp TIMESTAMP
         )
         """);

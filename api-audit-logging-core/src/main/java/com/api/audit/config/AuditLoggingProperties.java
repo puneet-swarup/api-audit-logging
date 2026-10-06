@@ -1,11 +1,18 @@
 package com.api.audit.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Centralised configuration properties for the API Audit Logging library.
@@ -31,6 +38,7 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  */
 @Getter
 @Setter
+@Validated
 @ConfigurationProperties(prefix = "audit.logging")
 public class AuditLoggingProperties {
 
@@ -68,16 +76,18 @@ public class AuditLoggingProperties {
 
   @NestedConfigurationProperty private Masking masking = new Masking();
 
+  @Valid @NestedConfigurationProperty private Policies policies = new Policies();
+
   /** Configuration for the asynchronous {@code logExecutor} thread pool. */
   @Getter
   @Setter
   public static class Async {
 
     /** Core number of threads kept alive in the log executor pool. Default: {@code 5}. */
-    private int corePoolSize = 5;
+    @Positive private int corePoolSize = 5;
 
     /** Maximum number of threads allowed in the log executor pool. Default: {@code 20}. */
-    private int maxPoolSize = 20;
+    @Positive private int maxPoolSize = 20;
 
     /**
      * Capacity of the bounded task queue.
@@ -85,7 +95,7 @@ public class AuditLoggingProperties {
      * <p>Tune this to: {@code peak_requests_per_second * avg_db_write_ms / 1000}. Default: {@code
      * 1000}.
      */
-    private int queueCapacity = 1000;
+    @Positive private int queueCapacity = 1000;
 
     /**
      * Policy applied when the executor queue is full.
@@ -113,14 +123,14 @@ public class AuditLoggingProperties {
      * <p>When a body is larger than this limit, the audit record stores a clear truncation marker
      * instead of copying the whole payload. Default: {@code 1048576} (1 MiB).
      */
-    private int maxBodySize = 1024 * 1024;
+    @Positive private int maxBodySize = 1024 * 1024;
 
     /**
      * Maximum serialized header bytes captured for request or response headers.
      *
      * <p>Headers are redacted before this limit is applied. Default: {@code 20000}.
      */
-    private int maxHeaderSize = 20_000;
+    @Positive private int maxHeaderSize = 20_000;
 
     /**
      * Ant-style request path patterns allowed for inbound capture.
@@ -151,6 +161,7 @@ public class AuditLoggingProperties {
      * Number of days to retain audit records before they are eligible for deletion. Only used when
      * {@code audit.logging.cleanup.enabled=true}. Default: {@code 30}.
      */
+    @Min(1)
     private int days = 30;
 
     /**
@@ -221,7 +232,7 @@ public class AuditLoggingProperties {
     private boolean enabled = false;
 
     /** Kafka topic used by the built-in Kafka sink. */
-    private String topic = "api-audit-logs";
+    @NotBlank private String topic = "api-audit-logs";
   }
 
   /** Configuration for selecting one of the built-in searchable storage implementations. */
@@ -293,5 +304,143 @@ public class AuditLoggingProperties {
      * }</pre>
      */
     private List<String> additionalFields = new ArrayList<>();
+  }
+
+  /**
+   * Configuration for the audit policy engine.
+   *
+   * <p>The engine combines the annotation policy and the path-based policy into a single decision
+   * per request. Custom policies supplied as beans are also evaluated.
+   *
+   * <p>This block is the entry point for the "add the library and configure paths, without changing
+   * application code" mode. See {@code policies.path-based}.
+   */
+  @Getter
+  @Setter
+  public static class Policies {
+
+    @NestedConfigurationProperty private AnnotationPolicy annotation = new AnnotationPolicy();
+
+    @Valid @NestedConfigurationProperty private PathBasedPolicy pathBased = new PathBasedPolicy();
+  }
+
+  /**
+   * Configuration for the annotation-based policy.
+   *
+   * <p>This policy opts a request into auditing when the controller method or class carries {@link
+   * com.api.audit.annotation.AuditLog}. It is enabled by default to preserve backward compatibility
+   * with applications that already annotate their controllers.
+   */
+  @Getter
+  @Setter
+  public static class AnnotationPolicy {
+
+    /**
+     * Whether the annotation policy is evaluated. Default: {@code true}.
+     *
+     * <p>Set this to {@code false} to run the library entirely in path-based (config-only) mode.
+     */
+    private boolean enabled = true;
+  }
+
+  /**
+   * Configuration for the path-based policy.
+   *
+   * <p>When enabled, requests whose path matches a rule are audited even when no {@code @AuditLog}
+   * annotation is present. This is the zero-code-change mode: add the library dependency, declare
+   * the rules in configuration, and restart the JVM.
+   *
+   * <p>Rules are evaluated from the most specific to the least specific. A rule with {@code audit:
+   * false} is an explicit skip and always wins.
+   */
+  @Getter
+  @Setter
+  public static class PathBasedPolicy {
+
+    /**
+     * Whether path-based auditing is active. Default: {@code false}.
+     *
+     * <p>Path-based auditing is opt-in so that merely adding the library does not start capturing
+     * traffic. Enable it explicitly and declare at least one rule under {@code rules}.
+     */
+    private boolean enabled = false;
+
+    /**
+     * Ordered list of path rules. An empty list means the policy never matches.
+     *
+     * <p>Specificity is computed by the policy so that more specific rules (longer patterns, fewer
+     * wildcards, and an explicit HTTP method) take precedence over broader ones, regardless of the
+     * order they appear in configuration.
+     */
+    private List<PathRule> rules = new ArrayList<>();
+  }
+
+  /**
+   * A single path-based audit rule.
+   *
+   * <p>Example:
+   *
+   * <pre>{@code
+   * audit:
+   *   logging:
+   *     policies:
+   *       path-based:
+   *         enabled: true
+   *         rules:
+   *           - pattern: /api/v1/payments/**
+   *             description: Payment APIs
+   *             methods: [POST, PUT]
+   *             capture: FULL
+   *             tags:
+   *               module: payments
+   *               tier: critical
+   *           - pattern: /internal/**
+   *             audit: false
+   * }</pre>
+   */
+  @Getter
+  @Setter
+  public static class PathRule {
+
+    /**
+     * The path pattern to match. Interpretation depends on {@link #matcher}. Default matcher is
+     * {@link com.api.audit.policy.PathMatcherType#ANT}.
+     */
+    @NotBlank private String pattern;
+
+    /**
+     * The matching strategy for {@link #pattern}. Default: {@link
+     * com.api.audit.policy.PathMatcherType#ANT}.
+     */
+    private com.api.audit.policy.PathMatcherType matcher = com.api.audit.policy.PathMatcherType.ANT;
+
+    /**
+     * Whether matching requests are audited. Default: {@code true}.
+     *
+     * <p>Set to {@code false} to create an explicit skip rule. Skip rules always win over positive
+     * rules and over the annotation policy.
+     */
+    private boolean audit = true;
+
+    /**
+     * HTTP methods this rule applies to. When empty, the rule applies to every method. Matching is
+     * case-insensitive.
+     */
+    private List<String> methods = new ArrayList<>();
+
+    /**
+     * Human-readable description copied into the audit record when this rule matches. When blank,
+     * the policy falls back to {@code "<METHOD> <path>"}.
+     */
+    private String description;
+
+    /**
+     * How much of the payload to capture when this rule matches. Default: {@link
+     * com.api.audit.policy.CaptureMode#FULL}.
+     */
+    private com.api.audit.policy.CaptureMode capture = com.api.audit.policy.CaptureMode.FULL;
+
+    /** Custom key/value dimensions attached to matching records. */
+    private Map<String, String> tags = new LinkedHashMap<>();
   }
 }

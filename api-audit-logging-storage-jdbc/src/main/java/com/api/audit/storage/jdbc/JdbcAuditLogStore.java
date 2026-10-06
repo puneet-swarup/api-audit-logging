@@ -41,8 +41,8 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         INSERT INTO api_audit_log
         (service_name, type, method, description, url, query_string, request_headers,
          response_headers, request_body, response_body, http_status, duration, correlation_id,
-         client_ip, user_agent, principal_name, error_type, error_message, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         client_ip, user_agent, principal_name, error_type, error_message, tags, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         record.getServiceName(),
         record.getType(),
@@ -62,6 +62,7 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         record.getPrincipalName(),
         record.getErrorType(),
         record.getErrorMessage(),
+        serializeTags(record.getTags()),
         Timestamp.valueOf(record.getTimestamp()));
   }
 
@@ -192,7 +193,81 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         .errorType(rs.getString("error_type"))
         .errorMessage(rs.getString("error_message"))
         .timestamp(rs.getTimestamp("timestamp").toLocalDateTime())
+        .tags(parseTags(rs.getString("tags")))
+        .tags(parseTags(rs.getString("tags")))
+        .tags(parseTags(rs.getString("tags")))
+        .tags(parseTags(rs.getString("tags")))
+        .tags(parseTags(rs.getString("tags")))
         .build();
+  }
+
+  /**
+   * Serializes the tag map to a compact JSON object string. Kept dependency-free because the JDBC
+   * module deliberately avoids extra libraries.
+   *
+   * @param tags the tag map; may be {@code null} or empty
+   * @return a JSON object string, or {@code null} when there are no tags
+   */
+  private static String serializeTags(java.util.Map<String, String> tags) {
+    if (tags == null || tags.isEmpty()) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder("{");
+    boolean first = true;
+    for (java.util.Map.Entry<String, String> entry : tags.entrySet()) {
+      if (!first) {
+        sb.append(',');
+      }
+      first = false;
+      sb.append('"').append(escape(entry.getKey())).append("\":\"");
+      sb.append(escape(entry.getValue())).append('"');
+    }
+    return sb.append('}').toString();
+  }
+
+  /**
+   * Parses the compact JSON object string written by {@link #serializeTags(java.util.Map)}.
+   * Malformed input yields an empty map.
+   *
+   * @param json the stored JSON; may be {@code null}
+   * @return a parsed map, never {@code null}
+   */
+  private static java.util.Map<String, String> parseTags(String json) {
+    if (json == null || json.isBlank()) {
+      return java.util.Map.of();
+    }
+    java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+    String trimmed = json.trim();
+    if (trimmed.length() < 2 || trimmed.charAt(0) != '{') {
+      return java.util.Map.of();
+    }
+    String inner = trimmed.substring(1, trimmed.length() - 1);
+    if (inner.isBlank()) {
+      return java.util.Map.of();
+    }
+    for (String pair : inner.split(",")) {
+      int colon = pair.indexOf(':');
+      if (colon < 0) {
+        continue;
+      }
+      result.put(unquote(pair.substring(0, colon)), unquote(pair.substring(colon + 1)));
+    }
+    return result;
+  }
+
+  private static String escape(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
+  }
+
+  private static String unquote(String value) {
+    String v = value.trim();
+    if (v.length() >= 2 && v.charAt(0) == '"' && v.charAt(v.length() - 1) == '"') {
+      v = v.substring(1, v.length() - 1);
+    }
+    return v.replace("\\\"", "\"").replace("\\\\", "\\");
   }
 
   private record QueryParts(String whereClause, List<Object> args) {}

@@ -6,6 +6,9 @@ import static org.mockito.Mockito.*;
 import com.api.audit.config.AuditLoggingProperties;
 import com.api.audit.context.CorrelationContext;
 import com.api.audit.event.ApiLogEvent;
+import com.api.audit.policy.AnnotationAuditPolicy;
+import com.api.audit.policy.AuditDecisionEngine;
+import com.api.audit.policy.PathAuditPolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,8 +37,21 @@ class IncomingLoggingFilterTest {
 
   @BeforeEach
   void setUp() {
-    filter = new IncomingLoggingFilter(publisher, appName, new AuditLoggingProperties());
+    filter = buildFilter(new AuditLoggingProperties());
     MDC.clear();
+  }
+
+  /**
+   * Builds a filter whose decision engine contains the annotation policy plus a path policy derived
+   * from the supplied properties. Existing tests keep exercising the annotation flow by setting the
+   * {@code AUDIT_LOG_ENABLED} request attribute; the path policy is disabled by default.
+   */
+  private IncomingLoggingFilter buildFilter(AuditLoggingProperties properties) {
+    AnnotationAuditPolicy annotation =
+        new AnnotationAuditPolicy(properties.getPolicies().getAnnotation().isEnabled());
+    PathAuditPolicy path = new PathAuditPolicy(properties);
+    AuditDecisionEngine engine = new AuditDecisionEngine(java.util.List.of(annotation, path));
+    return new IncomingLoggingFilter(publisher, appName, properties, engine);
   }
 
   @Test
@@ -45,6 +61,7 @@ class IncomingLoggingFilterTest {
     // ARRANGE
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.addHeader(CorrelationContext.CORRELATION_ID_HEADER, "FIXED-CID-123");
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     // We must verify MDC *inside* the filter chain because it is cleared in finally
@@ -73,6 +90,7 @@ class IncomingLoggingFilterTest {
   void testDoFilterInternal_NoCid() throws ServletException, IOException {
     // ARRANGE
     MockHttpServletRequest request = new MockHttpServletRequest();
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
     MockHttpServletResponse response = new MockHttpServletResponse();
 
     // Explicitly match the wrappers created inside the filter
@@ -140,7 +158,7 @@ class IncomingLoggingFilterTest {
   void bodyLimitIsConfigurable() throws ServletException, IOException {
     AuditLoggingProperties properties = new AuditLoggingProperties();
     properties.getCapture().setMaxBodySize(5);
-    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    filter = buildFilter(properties);
     MockHttpServletRequest request = new MockHttpServletRequest("POST", "/limited");
     request.setContentType("application/json");
     request.setContent(
@@ -160,7 +178,7 @@ class IncomingLoggingFilterTest {
   void excludedPathSkipsInboundAuditCapture() throws ServletException, IOException {
     AuditLoggingProperties properties = new AuditLoggingProperties();
     properties.getCapture().getExcludedPaths().add("/actuator/**");
-    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    filter = buildFilter(properties);
     MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
     request.setAttribute("AUDIT_LOG_ENABLED", true);
     MockHttpServletResponse response = new MockHttpServletResponse();
@@ -179,7 +197,7 @@ class IncomingLoggingFilterTest {
     properties
         .getCapture()
         .setIncludedPaths(new java.util.ArrayList<>(java.util.List.of("/api/**")));
-    filter = new IncomingLoggingFilter(publisher, appName, properties);
+    filter = buildFilter(properties);
     MockHttpServletRequest request = new MockHttpServletRequest("GET", "/internal/status");
     request.setAttribute("AUDIT_LOG_ENABLED", true);
     MockHttpServletResponse response = new MockHttpServletResponse();

@@ -78,6 +78,48 @@ public class JpaAuditLogSearchStore implements AuditLogSearchStore {
         .errorType(entity.getErrorType())
         .errorMessage(entity.getErrorMessage())
         .timestamp(entity.getTimestamp())
+        .tags(parseTags(entity.getTags()))
         .build();
+  }
+
+  /**
+   * Parses the JSON object string stored in the {@code tags} column back into a map. The format is
+   * the compact subset written by {@link JpaAuditLogStore}. Malformed or empty input yields an
+   * empty map so a bad row never breaks a search response.
+   *
+   * @param json the stored JSON object string; may be {@code null}
+   * @return a parsed map, or an empty map when there is nothing to parse
+   */
+  private java.util.Map<String, String> parseTags(String json) {
+    if (json == null || json.isBlank()) {
+      return java.util.Map.of();
+    }
+    java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+    String trimmed = json.trim();
+    if (trimmed.length() < 2 || trimmed.charAt(0) != '{') {
+      return java.util.Map.of();
+    }
+    String inner = trimmed.substring(1, trimmed.length() - 1);
+    if (inner.isBlank()) {
+      return java.util.Map.of();
+    }
+    for (String pair : inner.split(",")) {
+      int colon = pair.indexOf(':');
+      if (colon < 0) {
+        continue;
+      }
+      String key = unquote(pair.substring(0, colon));
+      String value = unquote(pair.substring(colon + 1));
+      result.put(key, value);
+    }
+    return result;
+  }
+
+  private String unquote(String value) {
+    String v = value.trim();
+    if (v.length() >= 2 && v.charAt(0) == '"' && v.charAt(v.length() - 1) == '"') {
+      v = v.substring(1, v.length() - 1);
+    }
+    return v.replace("\\\"", "\"").replace("\\\\", "\\");
   }
 }

@@ -1,0 +1,73 @@
+# Profile: path-based
+#
+# Demonstrates ZERO-code-change, path-based auditing. The controller backing these paths
+# (PathAuditDemoController) has NO @AuditLog annotation. Capture is enabled purely by the
+# configuration below. Add the library, add this config, restart the JVM - nothing else.
+#
+# Run it with:
+#   .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-based"
+#
+# This profile deliberately exercises every path-rule feature so the sample doubles as living
+# documentation:
+#   - Ant pattern with description + tags + FULL capture
+#   - METADATA_ONLY capture (no bodies stored)
+#   - BODY_ONLY capture (no headers stored)
+#   - method-scoped rule (mutations only)
+#   - regex matcher rule
+#   - explicit skip rule
+#   - annotation policy left ON so annotated endpoints still work alongside path rules
+
+audit:
+  logging:
+    enabled: true
+    storage:
+      type: jpa
+    policies:
+      annotation:
+        # Keep annotation-based auditing on so annotated endpoints keep working alongside.
+        enabled: true
+      path-based:
+        enabled: true
+        rules:
+          # 1) Broad positive rule: audit everything under this prefix and attach custom tags.
+          - pattern: /api/v1/path-audited/**
+            description: Path-Audited Demo APIs
+            capture: FULL
+            tags:
+              module: demo
+              audited-by: path-rule
+
+          # 2) METADATA_ONLY: capture method/url/status/timing/headers but NOT bodies.
+          #    Demonstrated by /api/v1/path-audited/metadata/**
+          - pattern: /api/v1/path-audited/metadata/**
+            description: Metadata-only API
+            capture: METADATA_ONLY
+            tags:
+              capture-mode: metadata-only
+
+          # 3) BODY_ONLY: capture request/response bodies but NOT headers.
+          #    Demonstrated by /api/v1/path-audited/body-only/**
+          - pattern: /api/v1/path-audited/body-only/**
+            description: Body-only API
+            capture: BODY_ONLY
+            tags:
+              capture-mode: body-only
+
+          # 4) Method-scoped rule: only audit mutations on this path. A GET on the same path is
+          #    not audited by this rule (it may still fall under rule 1 above if the prefix matches).
+          - pattern: /api/v1/path-audited/mutations/**
+            methods: [POST, PUT, PATCH]
+            description: Mutation APIs
+            tags:
+              kind: mutation
+
+          # 5) Regex matcher rule: audits versioned order paths using a regular expression.
+          - pattern: /api/v[0-9]+/path-audited/orders/.*
+            matcher: REGEX
+            description: Versioned Order APIs (regex)
+            tags:
+              matcher: regex
+
+          # 6) Explicit skip rule: never audit the health surface, even if another rule would match.
+          - pattern: /actuator/**
+            audit: false
