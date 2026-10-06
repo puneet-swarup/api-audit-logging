@@ -1,5 +1,6 @@
 ### [Unreleased]
 
+- Added GraalVM native-image runtime hints for the audit model types (`AuditLogRecord`, `AuditLogQuery`, `AuditLogPage`)
 - Added Kafka dead-letter and bounded retry: the sink observes the producer result, retries failed sends, and routes to a configurable dead-letter topic (`audit.logging.kafka.dead-letter-topic`, `retries`, `retry-backoff-ms`)
 - Added the storage-agnostic retention SPI (`AuditRetentionPolicy`) and a scheduler that purges every retention-capable store (JPA, JDBC, memory, custom) on the configured cron; replaced the JPA-only cleanup
 

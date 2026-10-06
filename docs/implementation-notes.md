@@ -293,3 +293,12 @@
   KafkaAuditLogAutoConfigurationTest updated to stub the producer future.
 - Docs: README config rows; Kafka guide reliability section.
 - Full build GREEN.
+
+## PHASE 7 — Batch 3: GraalVM native hints (2026-10-07)
+- New AuditLogRuntimeHints (core) registers reflection for AuditLogRecord, AuditLogQuery,
+  AuditLogPage; registered via META-INF/spring/aot.factories.
+- Test: AuditLogRuntimeHintsTest asserts the type hints are registered.
+- Docs: deployment guide native-image section. Production code uses no direct reflection, so Spring
+  AOT plus these hints cover the library.
+- Full build GREEN.
+- PHASE 7 COMPLETE (retention SPI, Kafka DLQ/retry, native hints).

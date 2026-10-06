@@ -14,6 +14,7 @@ and Kafka sinks. The items below are the next steps to make the project even str
 - Sampling, drop metrics, and backpressure visibility.
 - Copy-safe record masking (`toBuilder`) and core dependency-direction guardrail.
 - A comprehensive `api-audit-logging-examples` cookbook module covering every option and feature.
+- Storage-agnostic retention SPI, Kafka dead-letter/retry, and GraalVM native-image hints.
 
 ## Near Term
 

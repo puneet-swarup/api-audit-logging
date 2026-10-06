@@ -477,3 +477,17 @@ failure in one store is logged and isolated; others still run.
 
 A write-only sink such as Kafka does not implement retention — the downstream platform owns its own.
 To participate, implement `AuditRetentionPolicy` on your store and expose it as a bean.
+
+## GraalVM native image
+
+The library supports GraalVM native images. Spring Boot's AOT engine handles configuration binding
+and auto-configuration, and the library registers runtime hints for its model types (`AuditLogRecord`,
+`AuditLogQuery`, `AuditLogPage`) so they can be serialized reflectively by Jackson without you adding
+hints.
+
+Build a native image as usual:
+
+    .\gradlew.bat nativeCompile
+
+No extra configuration is required for the audit library. If your application serializes additional
+custom types with Jackson, register hints for those in your own `RuntimeHintsRegistrar`.
