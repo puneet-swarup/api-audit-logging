@@ -7,6 +7,7 @@ dependencies {
     testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
     testImplementation "org.testcontainers:kafka:${testcontainersVersion}"
     testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation "org.awaitility:awaitility:${awaitilityVersion}"
 }
 
 jar { enabled = true; archiveClassifier.set('') }

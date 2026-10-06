@@ -52,7 +52,7 @@ class KafkaAuditLogStoreIT {
       String topic = "api-audit-logs-it";
 
       KafkaTemplate<String, AuditLogRecord> template = template(kafka.getBootstrapServers());
-      KafkaAuditLogStore store = new KafkaAuditLogStore(template, topic);
+      KafkaAuditLogStore store = new KafkaAuditLogStore(template, topic, null, 0, 0);
 
       AuditLogRecord record =
           AuditLogRecord.builder()

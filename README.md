@@ -416,6 +416,9 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.storage.type` | module default | Prefer one built-in storage module: `jpa`, `jdbc`, or `memory`; use `kafka` together with Kafka settings |
 | `audit.logging.kafka.enabled` | `false` | Enable Kafka as the audit sink when the Kafka module is present |
 | `audit.logging.kafka.topic` | `api-audit-logs` | Kafka topic for audit records |
+| `audit.logging.kafka.dead-letter-topic` | none | Topic for records that fail after retries |
+| `audit.logging.kafka.retries` | `2` | Retries for a failed Kafka publish before DLQ |
+| `audit.logging.kafka.retry-backoff-ms` | `500` | Delay between Kafka publish retries |
 | `audit.logging.internal.api-key` | none | API key for `/internal/audit-logs`; blank means fail-secure |
 | `audit.logging.masking.additional-fields` | `[]` | Extra JSON field names to redact |
 | `audit.logging.policies.annotation.enabled` | `true` | Evaluate the `@AuditLog` annotation policy |

@@ -65,7 +65,15 @@ class KafkaAuditLogAutoConfigurationTest {
     @Bean
     @SuppressWarnings("unchecked")
     KafkaTemplate<String, AuditLogRecord> kafkaTemplate() {
-      return org.mockito.Mockito.mock(KafkaTemplate.class);
+      KafkaTemplate<String, AuditLogRecord> template =
+          org.mockito.Mockito.mock(KafkaTemplate.class);
+      org.mockito.Mockito.when(
+              template.send(
+                  org.mockito.ArgumentMatchers.anyString(),
+                  org.mockito.ArgumentMatchers.any(),
+                  org.mockito.ArgumentMatchers.any()))
+          .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+      return template;
     }
   }
 }

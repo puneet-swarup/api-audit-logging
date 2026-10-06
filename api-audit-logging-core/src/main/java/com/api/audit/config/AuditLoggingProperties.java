@@ -242,6 +242,24 @@ public class AuditLoggingProperties {
 
     /** Kafka topic used by the built-in Kafka sink. */
     @NotBlank private String topic = "api-audit-logs";
+
+    /**
+     * Optional dead-letter topic. When set, a record that cannot be published after the configured
+     * retries is re-published here instead of being lost. When blank, failures are only logged and
+     * metered.
+     */
+    private String deadLetterTopic;
+
+    /**
+     * Number of times to retry a failed publish before routing to the dead-letter topic. Default:
+     * {@code 2}.
+     */
+    @Min(0)
+    private int retries = 2;
+
+    /** Delay in milliseconds between publish retries. Default: {@code 500}. */
+    @Min(0)
+    private long retryBackoffMs = 500;
   }
 
   /** Configuration for selecting one of the built-in searchable storage implementations. */

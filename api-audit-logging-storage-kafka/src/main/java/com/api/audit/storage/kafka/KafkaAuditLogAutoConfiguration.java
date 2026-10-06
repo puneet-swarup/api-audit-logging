@@ -37,6 +37,12 @@ public class KafkaAuditLogAutoConfiguration {
   @ConditionalOnMissingBean(AuditLogStore.class)
   public AuditLogStore kafkaAuditLogStore(
       KafkaTemplate<String, AuditLogRecord> kafkaTemplate, AuditLoggingProperties properties) {
-    return new KafkaAuditLogStore(kafkaTemplate, properties.getKafka().getTopic());
+    AuditLoggingProperties.Kafka kafka = properties.getKafka();
+    return new KafkaAuditLogStore(
+        kafkaTemplate,
+        kafka.getTopic(),
+        kafka.getDeadLetterTopic(),
+        kafka.getRetries(),
+        kafka.getRetryBackoffMs());
   }
 }

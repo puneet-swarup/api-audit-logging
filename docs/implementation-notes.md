@@ -283,3 +283,13 @@
   JpaAuditLogStoreRetentionTest, InMemoryAuditLogRetentionTest, AuditRetentionSchedulerTest.
 - Docs: README config row updated; deployment guide retention section.
 - Full build GREEN.
+
+## PHASE 7 — Batch 2: Kafka DLQ + retry (2026-10-07)
+- KafkaAuditLogStore now observes the producer result (whenComplete), retries failed sends with a
+  backoff, and routes to a dead-letter topic when configured; never throws to the audit thread.
+- New config: kafka.dead-letter-topic (optional), kafka.retries (default 2), kafka.retry-backoff-ms
+  (default 500), with @Min validation.
+- Tests: KafkaAuditLogStoreTest (success, retry+DLQ via mocked template); existing
+  KafkaAuditLogAutoConfigurationTest updated to stub the producer future.
+- Docs: README config rows; Kafka guide reliability section.
+- Full build GREEN.

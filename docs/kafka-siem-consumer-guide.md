@@ -200,3 +200,28 @@ Kafka is intentionally a write sink. It does not power `/internal/audit-logs` by
 
 Use Kafka alone when a central platform owns querying and retention. Pair Kafka with JPA, JDBC, or a
 custom `AuditLogSearchStore` when the application should also expose local audit search.
+
+## Reliability: retries and dead-letter
+
+The Kafka sink inspects the producer result of every send. On failure it retries a bounded number of
+times, then routes the record to a dead-letter topic if one is configured, so a transient broker
+problem never silently drops an audit record.
+
+    audit:
+      logging:
+        kafka:
+          enabled: true
+          topic: api-audit-logs
+          dead-letter-topic: api-audit-logs-dlq
+          retries: 2
+          retry-backoff-ms: 500
+
+Behavior:
+
+- A failed send is retried up to `retries` times with `retry-backoff-ms` between attempts.
+- If retries are exhausted and `dead-letter-topic` is set, the record is re-published there.
+- If no dead-letter topic is configured, the failure is logged and the record is dropped (the
+  producer result is still observed; the sink never throws to the audit thread).
+
+Give the dead-letter topic its own retention and alerting so operators can inspect and replay failed
+records.
