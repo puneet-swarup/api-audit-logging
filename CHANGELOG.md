@@ -1,4 +1,4 @@
-### [Unreleased]
+### [3.1.0] - 2026-10-07
 
 - Added `schemaVersion` to `AuditLogRecord` (default 1) for downstream event contract evolution, persisted by JPA (V1003 migration for 5 vendors) and JDBC
 - Added the `api-audit-logging-test` module: `@EnableAuditLoggingTest`, `CapturedAuditLogs`, and fluent `AuditLogAssertions` for asserting audit behavior in host tests
