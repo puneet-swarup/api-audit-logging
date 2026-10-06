@@ -222,3 +222,25 @@
   a 3.0.0-class change; the 2.3.0 entry documents it while the project is still pre-3.0.
 - DEFERRED (documented): splitting the god-object `AuditLoggingProperties`; it is high blast radius
   with low user-visible value and can be done incrementally.
+
+## PHASE 6 (Part A + B) — WebClient body capture + Testcontainers (2026-10-07)
+- WebClient response-body capture (opt-in `audit.logging.webclient.capture-bodies`):
+  - New `WebClientBodyCapture` (join buffers, size-limited toCapturedString) — single responsibility.
+  - New `WebClientAuditFilter` — builds the ExchangeFilterFunction; response body drained, captured,
+    and rebuilt so downstream callers still receive it.
+  - New `AuditBodyInserters.fromValue(value, holder)` for request-body capture at the call site
+    (ClientRequest bodies are opaque BodyInserters and cannot be read by a filter).
+  - New property block `audit.logging.webclient.capture-bodies` (default false).
+  - Tests: `WebClientBodyCaptureTest` (unit), `WebClientAuditFilterTest` (MockWebServer; proves body
+    capture preserves the downstream body and captures transport errors).
+- Testcontainers integration tests (real engines), auto-skipped without Docker:
+  - `AuditLogMigrationPostgresIT`, `AuditLogMigrationMysqlIT` — run the library's Flyway migrations
+    and assert the resulting schema (incl. the `tags` column).
+  - `KafkaAuditLogStoreIT` — a record round-trips through a real broker, keyed by correlation ID.
+  - Added `testcontainersVersion` to gradle.properties; test deps added to storage-jpa and storage-kafka.
+- Examples: new `WebClientBodyCaptureExample` + `webclient-bodies` profile; examples README updated.
+- Docs: README WebClient section + config row; deployment guide sections for Testcontainers and
+  WebClient body capture.
+- WebFlux inbound filter (Part C) NOT done — it requires a framework-neutral AuditRequest abstraction
+  (a breaking change) and is deferred to 4.0.0 per the agreed plan.
+- Full build GREEN.

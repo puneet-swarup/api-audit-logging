@@ -1,0 +1,11 @@
+# Profile: webclient-bodies
+# Demonstrates WebClient response-body capture (opt-in).
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=webclient-bodies"
+#
+# The response body of outbound WebClient calls is recorded on the audit record and still delivered
+# to the caller.
+
+audit:
+  logging:
+    webclient:
+      capture-bodies: true

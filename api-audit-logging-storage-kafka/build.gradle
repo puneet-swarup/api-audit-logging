@@ -1,6 +1,12 @@
 dependencies {
     api project(':api-audit-logging-core')
     api 'org.springframework.kafka:spring-kafka'
+
+    // Real-broker integration test (Testcontainers). Skipped automatically when Docker is absent.
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:kafka:${testcontainersVersion}"
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 jar { enabled = true; archiveClassifier.set('') }

@@ -409,3 +409,38 @@ After deploying, confirm the library is active:
 | Plain JAR (non-web) | Inside the JAR | YAML, env, flags | Flyway or own |
 | Docker/K8s | Inside the image/JAR | env vars + secrets | Flyway or own |
 | Tests | test classpath | test properties / memory store | in-memory |
+
+## Integration testing with Testcontainers
+
+The storage modules ship integration tests that run the Flyway migrations against real databases and
+the Kafka sink against a real broker, using Testcontainers. These tests are **skipped
+automatically** when no Docker runtime is available, so they never break a machine without
+containers.
+
+To run them, ensure Docker is running and execute:
+
+    .\gradlew.bat test
+
+Covered:
+
+| Module | Test | What it proves |
+|---|---|---|
+| `storage-jpa` | `AuditLogMigrationPostgresIT` | The PostgreSQL migrations create `api_audit_log` with all columns including `tags` |
+| `storage-jpa` | `AuditLogMigrationMysqlIT` | The MySQL migrations create the same table |
+| `storage-kafka` | `KafkaAuditLogStoreIT` | A record round-trips through a real broker, keyed by correlation ID |
+
+This is the difference between "the migrations should work" and "the migrations are proven against a
+real engine."
+
+## WebClient body capture
+
+By default the WebClient integration captures metadata only. To capture response bodies (which are
+buffered and re-published so callers are unaffected):
+
+    audit:
+      logging:
+        webclient:
+          capture-bodies: true
+
+Body size is bounded by `audit.logging.capture.max-body-size`; oversized bodies are stored as a
+truncation marker while still being delivered in full to the caller.

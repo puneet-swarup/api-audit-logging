@@ -24,6 +24,7 @@ Every profile exposes the internal search endpoint so you can inspect captured r
 | `policy` | A custom `AuditPolicy` bean driven by a request header | `application-policy.yaml` |
 | `observability` | Sampling (store a fraction of successes, always keep errors) | `application-observability.yaml` |
 | `memory` | In-memory storage instead of a database | `application-memory.yaml` |
+| `webclient-bodies` | WebClient response-body capture (opt-in) | `application-webclient-bodies.yaml` |
 
 ## Feature map (every option)
 
@@ -64,6 +65,7 @@ Every profile exposes the internal search endpoint so you can inspect captured r
 | RestTemplate | `GET /examples/clients/resttemplate/42` | `api-audit-logging-client-resttemplate` |
 | RestClient | `GET /examples/clients/restclient/42` | `api-audit-logging-client-resttemplate` |
 | WebClient | `GET /examples/clients/webclient/42` | `api-audit-logging-client-webclient` |
+| WebClient (body capture) | `GET /examples/clients/webclient-bodies/42` | `api-audit-logging-client-webclient` (`webclient-bodies` profile) |
 
 Correlation ID is propagated, so inbound and outbound records share the same value.
 

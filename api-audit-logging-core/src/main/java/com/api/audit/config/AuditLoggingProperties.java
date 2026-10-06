@@ -67,6 +67,8 @@ public class AuditLoggingProperties {
 
   @NestedConfigurationProperty private Capture capture = new Capture();
 
+  @NestedConfigurationProperty private WebClient webclient = new WebClient();
+
   @NestedConfigurationProperty private FeignError feignError = new FeignError();
 
   @NestedConfigurationProperty private Flyway flyway = new Flyway();
@@ -312,6 +314,29 @@ public class AuditLoggingProperties {
      * }</pre>
      */
     private List<String> additionalFields = new ArrayList<>();
+  }
+
+  /**
+   * Configuration for WebClient outbound capture.
+   *
+   * <p>By default the WebClient integration captures metadata only (method, URL, status, timing,
+   * headers, correlation ID) because consuming reactive bodies requires re-publishing them. When
+   * {@link #captureBodies} is enabled the integration additionally buffers request and response
+   * bodies and re-publishes them downstream, so normal application processing is unaffected.
+   */
+  @Getter
+  @Setter
+  public static class WebClient {
+
+    /**
+     * Whether to capture WebClient request and response bodies. Default: {@code false}.
+     *
+     * <p>When enabled, bodies are buffered in memory and re-published for downstream subscribers.
+     * Each body is bounded by {@code audit.logging.capture.max-body-size}. Enabling this has a
+     * small memory cost per in-flight exchange; leave it off for high-throughput streaming
+     * endpoints.
+     */
+    private boolean captureBodies = false;
   }
 
   /**

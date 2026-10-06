@@ -1,3 +1,8 @@
+### [Unreleased]
+
+- Added opt-in WebClient response-body capture (`audit.logging.webclient.capture-bodies`) that buffers and re-publishes the body so callers are unaffected; added `AuditBodyInserters` for request-body capture at the call site
+- Added Testcontainers integration tests: PostgreSQL and MySQL migration tests, and a Kafka producer round-trip test (skipped automatically when Docker is unavailable)
+
 ### [3.0.0] - 2026-10-06
 
 - **BREAKING:** Decoupled the storage search SPI from Spring Data. `AuditLogSearchStore` now takes a framework-neutral `AuditLogQuery` and returns `AuditLogPage`; HTTP pagination is handled at the web layer. Custom store implementations must migrate — see `docs/spi-migration-guide.md`

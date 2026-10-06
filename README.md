@@ -303,7 +303,20 @@ library captures the underlying HTTP exchange.
 
 Add `api-audit-logging-client-webclient` to customize Spring-managed `WebClient.Builder`
 instances. The first version captures method, URL, status, duration, and correlation ID. It does
-not consume reactive request or response bodies because doing so safely requires body re-publishing.
+not consume reactive request or response bodies by default, because doing so safely requires
+body re-publishing. Metadata (method, URL, status, duration, headers, correlation ID) is always
+captured.
+
+Response-body capture is opt-in and safe: the body is buffered, recorded, and re-published so the
+caller still receives it.
+
+    audit:
+      logging:
+        webclient:
+          capture-bodies: true
+
+Request bodies cannot be read from an opaque `ClientRequest` body; to capture a request body, build
+the request with `AuditBodyInserters.fromValue(value, holder)`.
 
 ## Demo App Profiles
 
@@ -394,6 +407,7 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.sampling.enabled` | `false` | Enable sampling of successful records |
 | `audit.logging.sampling.sample-rate` | `1.0` | Fraction of non-error records to store (0.0–1.0) |
 | `audit.logging.sampling.always-capture-errors` | `true` | Always store error records regardless of sample rate |
+| `audit.logging.webclient.capture-bodies` | `false` | Capture (and re-publish) WebClient response bodies |
 
 ### Path Controls
 
