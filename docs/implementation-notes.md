@@ -272,3 +272,14 @@
   - Extended storage.type @Pattern to allow file|stdout. Own README-worthy Javadoc; tested.
 - README: testing section, storage module table, file/stdout storage choice, config row.
 - Full build GREEN.
+
+## PHASE 7 — Batch 1: storage-agnostic retention SPI (2026-10-07)
+- New `com.api.audit.spi.AuditRetentionPolicy` (core): `long purgeBefore(LocalDateTime cutoff)`.
+- New `AuditRetentionScheduler` (autoconfigure): runs on `audit.logging.cleanup.cron`, invokes every
+  AuditRetentionPolicy bean, isolates failures, logs totals. Bean is `@ConditionalOnProperty`
+  cleanup.enabled=true.
+- JPA/JDBC/memory stores now implement AuditRetentionPolicy. JPA repository delete now returns count.
+- Removed the JPA-only `CleanupConfig` and its test; superseded by the scheduler. Added
+  JpaAuditLogStoreRetentionTest, InMemoryAuditLogRetentionTest, AuditRetentionSchedulerTest.
+- Docs: README config row updated; deployment guide retention section.
+- Full build GREEN.

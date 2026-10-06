@@ -4,6 +4,8 @@ import com.api.audit.entity.ApiAuditLog;
 import com.api.audit.model.AuditLogRecord;
 import com.api.audit.repository.ApiAuditLogRepository;
 import com.api.audit.spi.AuditLogStore;
+import com.api.audit.spi.AuditRetentionPolicy;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,13 +22,24 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class JpaAuditLogStore implements AuditLogStore {
+public class JpaAuditLogStore implements AuditLogStore, AuditRetentionPolicy {
 
   private final ApiAuditLogRepository repository;
 
   @Override
   public void save(AuditLogRecord record) {
     repository.save(toEntity(record));
+  }
+
+  /**
+   * Deletes records captured before the cutoff.
+   *
+   * @param cutoff the exclusive upper bound on record timestamp
+   * @return the number of deleted records
+   */
+  @Override
+  public long purgeBefore(LocalDateTime cutoff) {
+    return repository.deleteByTimestampBefore(cutoff);
   }
 
   /**

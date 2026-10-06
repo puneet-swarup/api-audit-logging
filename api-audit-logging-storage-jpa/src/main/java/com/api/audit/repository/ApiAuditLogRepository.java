@@ -39,5 +39,5 @@ public interface ApiAuditLogRepository
    *     <p><b>Implementation note:</b> This is a derived delete query. For large datasets, call it
    *     within a transactional context and monitor performance.
    */
-  void deleteByTimestampBefore(LocalDateTime cutoff);
+  long deleteByTimestampBefore(LocalDateTime cutoff);
 }

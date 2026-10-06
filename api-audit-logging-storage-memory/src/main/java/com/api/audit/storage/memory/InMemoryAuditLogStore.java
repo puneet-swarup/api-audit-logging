@@ -5,6 +5,7 @@ import com.api.audit.query.AuditLogPage;
 import com.api.audit.query.AuditLogQuery;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditLogStore;
+import com.api.audit.spi.AuditRetentionPolicy;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,8 @@ import lombok.extern.slf4j.Slf4j;
  * @author Puneet Swarup
  */
 @Slf4j
-public class InMemoryAuditLogStore implements AuditLogStore, AuditLogSearchStore {
+public class InMemoryAuditLogStore
+    implements AuditLogStore, AuditLogSearchStore, AuditRetentionPolicy {
 
   private final List<AuditLogRecord> records = new CopyOnWriteArrayList<>();
 
@@ -31,6 +33,20 @@ public class InMemoryAuditLogStore implements AuditLogStore, AuditLogSearchStore
   @Override
   public void save(AuditLogRecord record) {
     records.add(record);
+  }
+
+  /**
+   * Removes records captured before the cutoff.
+   *
+   * @param cutoff the exclusive upper bound on record timestamp
+   * @return the number of removed records
+   */
+  @Override
+  public long purgeBefore(java.time.LocalDateTime cutoff) {
+    int before = records.size();
+    records.removeIf(
+        record -> record.getTimestamp() != null && record.getTimestamp().isBefore(cutoff));
+    return before - records.size();
   }
 
   /** Searches in-memory records using the framework-neutral query contract. */

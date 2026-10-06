@@ -5,9 +5,11 @@ import com.api.audit.query.AuditLogPage;
 import com.api.audit.query.AuditLogQuery;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditLogStore;
+import com.api.audit.spi.AuditRetentionPolicy;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,7 +29,7 @@ import org.springframework.jdbc.core.RowMapper;
  * @author Puneet Swarup
  */
 @RequiredArgsConstructor
-public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
+public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore, AuditRetentionPolicy {
 
   private static final RowMapper<AuditLogRecord> ROW_MAPPER = JdbcAuditLogStore::toRecord;
 
@@ -76,6 +78,20 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         record.getErrorMessage(),
         serializeTags(record.getTags()),
         Timestamp.valueOf(record.getTimestamp()));
+  }
+
+  /**
+   * Deletes records captured before the cutoff.
+   *
+   * @param cutoff the exclusive upper bound on record timestamp
+   * @return the number of deleted records
+   */
+  @Override
+  public long purgeBefore(LocalDateTime cutoff) {
+    Integer deleted =
+        jdbcTemplate.update(
+            "DELETE FROM api_audit_log WHERE timestamp < ?", Timestamp.valueOf(cutoff));
+    return deleted == null ? 0 : deleted;
   }
 
   /** Searches records with optional filters, ordering, and database-level pagination. */

@@ -459,3 +459,21 @@ for your database:
 Without the matching module, Flyway fails at startup with an unsupported-database error. The
 library's own Testcontainers integration tests add these modules so the vendor migrations are proven
 against real engines.
+
+## Data retention
+
+Retention is storage-agnostic. Enable the scheduler and set the period:
+
+    audit:
+      logging:
+        cleanup:
+          enabled: true
+          days: 30
+          cron: "0 0 2 * * *"
+
+On the configured cron the library invokes every store that implements `AuditRetentionPolicy`
+(JPA, JDBC, memory, and any custom store you provide) and deletes records older than `days`. A
+failure in one store is logged and isolated; others still run.
+
+A write-only sink such as Kafka does not implement retention — the downstream platform owns its own.
+To participate, implement `AuditRetentionPolicy` on your store and expose it as a bean.

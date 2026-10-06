@@ -270,6 +270,18 @@ public class LoggingAutoConfiguration {
     return registration;
   }
 
+  /**
+   * Registers the storage-agnostic retention scheduler. Active only when {@code
+   * audit.logging.cleanup.enabled=true}. It invokes every {@link
+   * com.api.audit.spi.AuditRetentionPolicy} bean on the configured cron.
+   */
+  @Bean
+  @ConditionalOnProperty(prefix = "audit.logging.cleanup", name = "enabled", havingValue = "true")
+  public AuditRetentionScheduler auditRetentionScheduler(
+      List<com.api.audit.spi.AuditRetentionPolicy> policies) {
+    return new AuditRetentionScheduler(policies, properties);
+  }
+
   /** Registers the internal audit log controller. */
   @Bean
   @ConditionalOnBean(AuditLogSearchStore.class)

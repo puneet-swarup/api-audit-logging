@@ -1,3 +1,7 @@
+### [Unreleased]
+
+- Added the storage-agnostic retention SPI (`AuditRetentionPolicy`) and a scheduler that purges every retention-capable store (JPA, JDBC, memory, custom) on the configured cron; replaced the JPA-only cleanup
+
 ### [3.1.0] - 2026-10-07
 
 - Added `schemaVersion` to `AuditLogRecord` (default 1) for downstream event contract evolution, persisted by JPA (V1003 migration for 5 vendors) and JDBC

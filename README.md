@@ -410,7 +410,7 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.capture.excluded-paths` | `[]` | Ant-style inbound paths skipped before request/response wrapping |
 | `audit.logging.feign-error.enabled` | `false` | Capture Feign error responses through an error decoder wrapper |
 | `audit.logging.flyway.enabled` | `false` | Add the library's vendor-specific migration path to Flyway |
-| `audit.logging.cleanup.enabled` | `false` | Enable scheduled cleanup for JPA storage |
+| `audit.logging.cleanup.enabled` | `false` | Enable scheduled retention purge across all retention-capable stores |
 | `audit.logging.cleanup.days` | `30` | Retention period for cleanup |
 | `audit.logging.cleanup.cron` | `0 0 2 * * *` | Spring cron expression for cleanup |
 | `audit.logging.storage.type` | module default | Prefer one built-in storage module: `jpa`, `jdbc`, or `memory`; use `kafka` together with Kafka settings |
