@@ -34,7 +34,7 @@ import lombok.Value;
  * @author Puneet Swarup
  */
 @Value
-@Builder
+@Builder(toBuilder = true)
 public class AuditLogRecord {
 
   /** The name of the service that captured this record. From {@code spring.application.name}. */

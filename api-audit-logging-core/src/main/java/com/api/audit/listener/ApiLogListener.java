@@ -67,28 +67,21 @@ public class ApiLogListener {
     }
   }
 
+  /**
+   * Returns a copy of the record with payload bodies masked.
+   *
+   * <p>Uses {@link AuditLogRecord#toBuilder()} so that every field is carried over automatically.
+   * This is deliberate: a field-by-field rebuild silently drops any field added later, which is a
+   * bug class this library previously hit with {@code tags}. Only the fields that must change are
+   * overridden here.
+   *
+   * @param original the captured record
+   * @return a copy with masked request and response bodies
+   */
   private AuditLogRecord mask(AuditLogRecord original) {
-    return AuditLogRecord.builder()
-        .serviceName(original.getServiceName())
-        .type(original.getType())
-        .method(original.getMethod())
-        .description(original.getDescription())
-        .url(original.getUrl())
-        .queryString(original.getQueryString())
-        .requestHeaders(original.getRequestHeaders())
-        .responseHeaders(original.getResponseHeaders())
+    return original.toBuilder()
         .requestBody(jsonMasker.mask(original.getRequestBody()))
         .responseBody(jsonMasker.mask(original.getResponseBody()))
-        .httpStatus(original.getHttpStatus())
-        .duration(original.getDuration())
-        .correlationId(original.getCorrelationId())
-        .clientIp(original.getClientIp())
-        .userAgent(original.getUserAgent())
-        .principalName(original.getPrincipalName())
-        .errorType(original.getErrorType())
-        .errorMessage(original.getErrorMessage())
-        .timestamp(original.getTimestamp())
-        .tags(original.getTags())
         .build();
   }
 }

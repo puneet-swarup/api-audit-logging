@@ -155,3 +155,24 @@
 - README: new "Sampling and Metrics" section + config rows. CHANGELOG updated.
 - Full build GREEN.
 - NOTE: `patch_file` leaves a `.orig` backup beside the patched file — always delete it after.
+
+## PHASE 5 — Module Hygiene & Robustness (2026-10-06)
+- Structural fix for the field-drift fragility:
+  - `AuditLogRecord` is now `@Builder(toBuilder = true)`.
+  - `ApiLogListener.mask()` uses `original.toBuilder()` and overrides ONLY the two body fields, so
+    every present and future field is carried over automatically. This closes the bug class that
+    caused `tags` to be dropped.
+  - New `ApiLogListenerTest` pins the guarantee (all fields preserved; bodies redacted).
+- Dependency-direction guardrail: new `DependencyDirectionTest` fails if the core imports any
+  storage/client module package. Dependency-free (no ArchUnit).
+- Storage type validation: `audit.logging.storage.type` now carries a JSR-380 `@Pattern`
+  (jpa|jdbc|memory|kafka) for fail-fast configuration.
+- DELIBERATELY DEFERRED (documented, not done):
+  - Splitting the `AuditLoggingProperties` god-object into per-module property classes. High blast
+    radius (every module reads it) and low user-visible value; can be done incrementally later.
+  - Framework-neutral `AuditLogPage` to remove spring-data-commons from the SPI. Breaking SPI change;
+    needs a compatibility shim. Deferred to avoid destabilizing storage modules.
+  - Enum-based storage selection: kept as a validated String because it is referenced inside
+    `@ConditionalOnExpression` string literals across modules; converting risks breaking conditional
+    wiring for little gain.
+- Full build GREEN.

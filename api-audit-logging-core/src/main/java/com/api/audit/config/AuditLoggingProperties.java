@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -252,6 +253,9 @@ public class AuditLoggingProperties {
      * audit.logging.kafka.enabled} because it is a streaming sink rather than a searchable local
      * store.
      */
+    @Pattern(
+        regexp = "jpa|jdbc|memory|kafka",
+        message = "audit.logging.storage.type must be one of: jpa, jdbc, memory, kafka")
     private String type;
   }
 
