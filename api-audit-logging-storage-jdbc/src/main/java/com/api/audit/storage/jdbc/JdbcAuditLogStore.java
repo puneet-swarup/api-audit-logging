@@ -50,11 +50,12 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
     jdbcTemplate.update(
         """
         INSERT INTO api_audit_log
-        (service_name, type, method, description, url, query_string, request_headers,
+        (schema_version, service_name, type, method, description, url, query_string, request_headers,
          response_headers, request_body, response_body, http_status, duration, correlation_id,
          client_ip, user_agent, principal_name, error_type, error_message, tags, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
+        record.getSchemaVersion(),
         record.getServiceName(),
         record.getType(),
         record.getMethod(),
@@ -167,6 +168,7 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
 
   private static AuditLogRecord toRecord(ResultSet rs, int rowNum) throws SQLException {
     return AuditLogRecord.builder()
+        .schemaVersion(rs.getObject("schema_version") == null ? 1 : rs.getInt("schema_version"))
         .serviceName(rs.getString("service_name"))
         .type(rs.getString("type"))
         .method(rs.getString("method"))

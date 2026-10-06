@@ -41,6 +41,15 @@ public class AuditLogRecord {
   String serviceName;
 
   /**
+   * Schema version of this record. Bumped when the record shape changes in a way downstream
+   * consumers (SIEM, warehouse) must handle, so they can evolve safely.
+   */
+  @Builder.Default int schemaVersion = CURRENT_SCHEMA_VERSION;
+
+  /** The current record schema version emitted by this library. */
+  public static final int CURRENT_SCHEMA_VERSION = 1;
+
+  /**
    * The category of the transaction. Standard values: {@code INCOMING}, {@code OUTGOING}, {@code
    * OUTGOING_ERROR}, {@code OUTGOING_TRANSPORT_ERROR}.
    */

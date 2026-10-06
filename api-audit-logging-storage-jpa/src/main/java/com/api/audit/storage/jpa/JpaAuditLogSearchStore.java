@@ -66,6 +66,7 @@ public class JpaAuditLogSearchStore implements AuditLogSearchStore {
 
   private AuditLogRecord toRecord(ApiAuditLog entity) {
     return AuditLogRecord.builder()
+        .schemaVersion(entity.getSchemaVersion() == null ? 1 : entity.getSchemaVersion())
         .serviceName(entity.getServiceName())
         .type(entity.getType())
         .method(entity.getMethod())

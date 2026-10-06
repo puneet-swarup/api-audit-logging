@@ -53,6 +53,8 @@ For finer control, depend on only the modules you need:
 | `api-audit-logging-storage-jdbc` | JdbcTemplate store and search store without JPA |
 | `api-audit-logging-storage-memory` | In-memory store for demos and tests |
 | `api-audit-logging-storage-kafka` | Kafka publishing sink for audit streams |
+| `api-audit-logging-storage-file` | JSON-lines file / stdout sink for local and container use |
+| `api-audit-logging-test` | Test slice and assertions for host applications |
 
 When storage modules are used directly, select the storage explicitly with
 `audit.logging.storage.type`. Direct storage modules do not silently become active just because they
@@ -263,6 +265,22 @@ audit:
 Kafka is a write sink only. If you need `/internal/audit-logs`, pair Kafka with a searchable store
 or provide your own `AuditLogSearchStore`.
 
+### File / stdout
+
+Use the JSON-lines sink for local development, containers, and lightweight SRE setups. Records are
+written as one JSON object per line, which is easy to tail and ship.
+
+    implementation "io.github.puneet-swarup:api-audit-logging-storage-file:3.0.0"
+
+    audit:
+      logging:
+        storage:
+          type: file        # or: stdout
+        file:
+          path: logs/audit.log
+
+This is a write sink only. Pair it with a searchable store if you also need `/internal/audit-logs`.
+
 For downstream consumers, SIEM indexing, alert examples, and topic design, see the
 [Kafka and SIEM Consumer Guide](docs/kafka-siem-consumer-guide.md).
 
@@ -413,6 +431,7 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.sampling.sample-rate` | `1.0` | Fraction of non-error records to store (0.0–1.0) |
 | `audit.logging.sampling.always-capture-errors` | `true` | Always store error records regardless of sample rate |
 | `audit.logging.webclient.capture-bodies` | `false` | Capture (and re-publish) WebClient response bodies |
+| `audit.logging.file.path` | `audit.log` | Destination file for the JSON-lines sink (`storage.type=file`) |
 
 ### Path Controls
 
@@ -529,3 +548,24 @@ class ApplicationIntegrationTest {
 ```
 
 For tests that need audit behavior without a database, use `api-audit-logging-storage-memory`.
+
+To assert that your endpoints produce the audit records you expect, add `api-audit-logging-test` and
+use `@EnableAuditLoggingTest`:
+
+    @SpringBootTest
+    @AutoConfigureMockMvc
+    @EnableAuditLoggingTest
+    class PaymentAuditTest {
+
+      @Autowired MockMvc mockMvc;
+      @Autowired CapturedAuditLogs auditLogs;
+
+      @Test
+      void capturesIncoming() throws Exception {
+        mockMvc.perform(get("/api/v1/payments/42"));
+        auditLogs.single().hasType("INCOMING").hasMethod("GET").hasStatus(200);
+      }
+    }
+
+`CapturedAuditLogs` records every published audit event (no database needed); `AuditLogAssertions`
+offers fluent checks (`hasType`, `hasMethod`, `hasStatus`, `hasTag`, `requestBodyContains`, and more).

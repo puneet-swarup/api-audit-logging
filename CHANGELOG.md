@@ -1,5 +1,8 @@
 ### [Unreleased]
 
+- Added `schemaVersion` to `AuditLogRecord` (default 1) for downstream event contract evolution, persisted by JPA (V1003 migration for 5 vendors) and JDBC
+- Added the `api-audit-logging-test` module: `@EnableAuditLoggingTest`, `CapturedAuditLogs`, and fluent `AuditLogAssertions` for asserting audit behavior in host tests
+- Added the `api-audit-logging-storage-file` module: a JSON-lines file / stdout sink (`storage.type=file` or `stdout`)
 - Added opt-in WebClient response-body capture (`audit.logging.webclient.capture-bodies`) that buffers and re-publishes the body so callers are unaffected; added `AuditBodyInserters` for request-body capture at the call site
 - Added Testcontainers integration tests: PostgreSQL and MySQL migration tests, and a Kafka producer round-trip test (skipped automatically when Docker is unavailable)
 - Fixed MySQL migrations: `V1000`/`V1001` no longer use the unsupported `ADD COLUMN IF NOT EXISTS` syntax and `V1002` uses a plain `ALTER TABLE`; added the Flyway 10+ database modules (`flyway-database-postgresql`, `flyway-mysql`) to the migration tests

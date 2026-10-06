@@ -69,6 +69,8 @@ public class AuditLoggingProperties {
 
   @NestedConfigurationProperty private WebClient webclient = new WebClient();
 
+  @NestedConfigurationProperty private FileSink file = new FileSink();
+
   @NestedConfigurationProperty private FeignError feignError = new FeignError();
 
   @NestedConfigurationProperty private Flyway flyway = new Flyway();
@@ -256,8 +258,9 @@ public class AuditLoggingProperties {
      * store.
      */
     @Pattern(
-        regexp = "jpa|jdbc|memory|kafka",
-        message = "audit.logging.storage.type must be one of: jpa, jdbc, memory, kafka")
+        regexp = "jpa|jdbc|memory|kafka|file|stdout",
+        message =
+            "audit.logging.storage.type must be one of: jpa, jdbc, memory, kafka, file, stdout")
     private String type;
   }
 
@@ -337,6 +340,23 @@ public class AuditLoggingProperties {
      * endpoints.
      */
     private boolean captureBodies = false;
+  }
+
+  /**
+   * Configuration for the JSON-lines file sink.
+   *
+   * <p>Used when {@code audit.logging.storage.type=file}. Records are written as one JSON object
+   * per line to the configured path.
+   */
+  @Getter
+  @Setter
+  public static class FileSink {
+
+    /**
+     * Destination file for the JSON-lines sink. Parent directories are created if missing. Default:
+     * {@code audit.log}. Ignored when {@code storage.type=stdout}.
+     */
+    private String path = "audit.log";
   }
 
   /**

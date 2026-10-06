@@ -35,6 +35,7 @@ public class JpaAuditLogStore implements AuditLogStore {
    */
   private ApiAuditLog toEntity(AuditLogRecord record) {
     ApiAuditLog entity = new ApiAuditLog();
+    entity.setSchemaVersion(record.getSchemaVersion());
     entity.setServiceName(record.getServiceName());
     entity.setType(record.getType());
     entity.setMethod(record.getMethod());

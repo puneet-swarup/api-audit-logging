@@ -1,0 +1,13 @@
+dependencies {
+    api project(':api-audit-logging-core')
+    api project(':api-audit-logging-storage-memory')
+
+    // The test slice is built on Spring Boot's test infrastructure.
+    api 'org.springframework.boot:spring-boot-test-autoconfigure'
+    api 'org.springframework.boot:spring-boot-test'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+jar { enabled = true; archiveClassifier.set('') }

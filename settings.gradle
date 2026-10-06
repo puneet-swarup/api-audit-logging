@@ -16,3 +16,9 @@ include 'api-audit-demo-app'
 
 // Comprehensive, runnable examples for every option and feature
 include 'api-audit-logging-examples'
+
+// Testing support (test slice + assertion helper) for host applications
+include 'api-audit-logging-test'
+
+// File and stdout sinks for local/SRE use
+include 'api-audit-logging-storage-file'

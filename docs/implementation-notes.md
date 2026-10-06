@@ -257,3 +257,18 @@
   failed.
 - Documented the Flyway 10+ module requirement in README and the deployment guide, since it affects
   any host using the library's Flyway path.
+
+## TIER 3 — Adoption multipliers (2026-10-07)
+- Schema versioning: `AuditLogRecord.schemaVersion` (default 1, CURRENT_SCHEMA_VERSION). Persisted by
+  JPA (V1003 migration for h2/postgresql/mysql/sqlserver/oracle) and JDBC (insert + row mapper).
+  Carried through masking automatically via toBuilder.
+- Testing support module `api-audit-logging-test`:
+  - `@EnableAuditLoggingTest` (registers the capture bean) + `CapturedAuditLogs` (Spring event
+    listener collecting ApiLogEvent records) + `AuditLogAssertions` (dependency-free fluent checks).
+  - Own README; self-tested by CapturedAuditLogsTest.
+- File/stdout sink module `api-audit-logging-storage-file`:
+  - `JsonLineAuditLogStore` writes one JSON object per line to a file or stdout; registers JavaTime
+    module. Auto-config activates on storage.type=file|stdout; `audit.logging.file.path` config.
+  - Extended storage.type @Pattern to allow file|stdout. Own README-worthy Javadoc; tested.
+- README: testing section, storage module table, file/stdout storage choice, config row.
+- Full build GREEN.

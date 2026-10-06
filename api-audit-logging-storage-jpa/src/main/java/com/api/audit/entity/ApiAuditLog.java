@@ -32,6 +32,9 @@ public class ApiAuditLog {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  /** Schema version of the record when it was captured. */
+  private Integer schemaVersion;
+
   /**
    * The name of the microservice or application that generated this log. Value is typically derived
    * from the {@code spring.application.name} property.
