@@ -2,6 +2,7 @@
 
 - Added opt-in WebClient response-body capture (`audit.logging.webclient.capture-bodies`) that buffers and re-publishes the body so callers are unaffected; added `AuditBodyInserters` for request-body capture at the call site
 - Added Testcontainers integration tests: PostgreSQL and MySQL migration tests, and a Kafka producer round-trip test (skipped automatically when Docker is unavailable)
+- Fixed MySQL migrations: `V1000`/`V1001` no longer use the unsupported `ADD COLUMN IF NOT EXISTS` syntax and `V1002` uses a plain `ALTER TABLE`; added the Flyway 10+ database modules (`flyway-database-postgresql`, `flyway-mysql`) to the migration tests
 
 ### [3.0.0] - 2026-10-06
 

@@ -1,2 +1,3 @@
-ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS error_type VARCHAR(255);
-ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS error_message LONGTEXT;
+-- Error columns are already created by V999 for MySQL.
+-- This migration is retained for version parity across vendors and is intentionally a no-op.
+SELECT 1;

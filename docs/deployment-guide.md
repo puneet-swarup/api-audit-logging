@@ -444,3 +444,18 @@ buffered and re-published so callers are unaffected):
 
 Body size is bounded by `audit.logging.capture.max-body-size`; oversized bodies are stored as a
 truncation marker while still being delivered in full to the caller.
+
+## Flyway 10+ database modules
+
+Flyway 10 split database support out of `flyway-core` into per-database modules. If your
+application runs migrations with Flyway 10 or newer (Spring Boot 3.5 ships Flyway 11), add the module
+for your database:
+
+    dependencies {
+        implementation 'org.flywaydb:flyway-core'
+        runtimeOnly 'org.flywaydb:flyway-database-postgresql' // or: flyway-mysql
+    }
+
+Without the matching module, Flyway fails at startup with an unsupported-database error. The
+library's own Testcontainers integration tests add these modules so the vendor migrations are proven
+against real engines.

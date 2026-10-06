@@ -244,3 +244,16 @@
 - WebFlux inbound filter (Part C) NOT done — it requires a framework-neutral AuditRequest abstraction
   (a breaking change) and is deferred to 4.0.0 per the agreed plan.
 - Full build GREEN.
+
+## FIX — Real-DB migration tests + MySQL migration SQL (2026-10-07)
+- Root cause of the CI failures in AuditLogMigrationPostgresIT / AuditLogMigrationMysqlIT:
+  1. Flyway 10+ split database support into separate modules; only flyway-core was present, so
+     Flyway reported an unsupported database. Added testRuntimeOnly flyway-database-postgresql and
+     flyway-mysql.
+  2. MySQL migrations used `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, which MySQL does not support,
+     and repeated columns already created by V999. V1000/V1001 are now safe no-op `SELECT 1;` for
+     version parity; V1002 is a plain `ALTER TABLE ... ADD COLUMN tags LONGTEXT`.
+- H2 (the default/test DB) was never affected, which is why local tests passed and only real-DB CI
+  failed.
+- Documented the Flyway 10+ module requirement in README and the deployment guide, since it affects
+  any host using the library's Flyway path.

@@ -5,12 +5,17 @@ dependencies {
 
     // Real-database migration tests (Testcontainers). These are integration tests that require a
     // container runtime; they are skipped automatically when Docker is unavailable.
+    //
+    // Flyway 10+ split database support into separate modules, so PostgreSQL and MySQL each need
+    // their own Flyway module on the test runtime classpath.
     testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
     testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
     testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
     testImplementation "org.testcontainers:mysql:${testcontainersVersion}"
     testRuntimeOnly 'org.postgresql:postgresql'
     testRuntimeOnly 'com.mysql:mysql-connector-j'
+    testRuntimeOnly 'org.flywaydb:flyway-database-postgresql'
+    testRuntimeOnly 'org.flywaydb:flyway-mysql'
 }
 
 jar { enabled = true; archiveClassifier.set('') }

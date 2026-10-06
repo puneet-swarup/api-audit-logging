@@ -194,6 +194,11 @@ active JDBC URL:
 If your organization owns schema migration centrally, keep `audit.logging.flyway.enabled=false` and
 copy the matching DDL into your own migration chain.
 
+> **Flyway 10+ note:** Flyway moved database support into separate modules. If the host uses Flyway
+> 10 or newer, add the matching module for your database (for example `flyway-database-postgresql`
+> or `flyway-mysql`) alongside `flyway-core`, or Flyway reports an unsupported database. This applies
+> to any Flyway-based migration, including this library's.
+
 ### JDBC
 
 Use JDBC when you want database-backed audit logs without JPA:
