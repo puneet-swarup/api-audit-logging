@@ -67,6 +67,28 @@ class PathBasedAuditingIntegrationTest {
   }
 
   @Test
+  @DisplayName("GIVEN a tag filter WHEN querying storage THEN only tagged records return")
+  void internalEndpointFiltersByTag() {
+
+    restTemplate.getForEntity("/api/v1/path-audited/hello", String.class);
+
+    await()
+        .atMost(8, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              List<Map<String, Object>> tagged =
+                  jdbcTemplate.queryForList(
+                      "SELECT * FROM api_audit_log WHERE tags LIKE ?", "%audited-by%");
+              assertThat(tagged).isNotEmpty();
+            });
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT * FROM api_audit_log WHERE tags LIKE ?", "%missing-key%"))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("GIVEN unannotated POST endpoint WHEN path rule matches THEN body is captured")
   void unannotatedPostEndpointCapturesBody() {
     ResponseEntity<String> response =

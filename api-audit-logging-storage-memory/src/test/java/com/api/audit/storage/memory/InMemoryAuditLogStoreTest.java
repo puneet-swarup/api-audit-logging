@@ -35,6 +35,7 @@ class InMemoryAuditLogStoreTest {
             .correlationId("cid-1")
             .clientIp("203.0.113.10")
             .principalName("puneet")
+            .tags(java.util.Map.of("module", "demo"))
             .timestamp(LocalDateTime.now())
             .build());
 
@@ -51,10 +52,88 @@ class InMemoryAuditLogStoreTest {
             "203.0.113.10",
             "puneet",
             null,
+            "module",
+            "demo",
             PageRequest.of(0, 10));
 
     assertThat(page.getTotalElements()).isEqualTo(1);
     assertThat(page.getContent().get(0).getUrl()).isEqualTo("/hello");
+    assertThat(page.getContent().get(0).getTags()).containsEntry("module", "demo");
+  }
+
+  @Test
+  void tagKeyFilterMatchesRecordsCarryingTheTag() {
+    InMemoryAuditLogStore store = new InMemoryAuditLogStore();
+    store.save(
+        AuditLogRecord.builder()
+            .type("INCOMING")
+            .method("GET")
+            .url("/tagged")
+            .tags(java.util.Map.of("module", "payments", "tier", "critical"))
+            .timestamp(LocalDateTime.now())
+            .build());
+    store.save(
+        AuditLogRecord.builder()
+            .type("INCOMING")
+            .method("GET")
+            .url("/untagged")
+            .timestamp(LocalDateTime.now())
+            .build());
+
+    var byKey =
+        store.search(
+            null,
+            null,
+            null,
+            "INCOMING",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "module",
+            null,
+            PageRequest.of(0, 10));
+    assertThat(byKey.getTotalElements()).isEqualTo(1);
+    assertThat(byKey.getContent().get(0).getUrl()).isEqualTo("/tagged");
+
+    var byKeyAndValue =
+        store.search(
+            null,
+            null,
+            null,
+            "INCOMING",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "tier",
+            "critical",
+            PageRequest.of(0, 10));
+    assertThat(byKeyAndValue.getTotalElements()).isEqualTo(1);
+
+    var byKeyWrongValue =
+        store.search(
+            null,
+            null,
+            null,
+            "INCOMING",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "tier",
+            "low",
+            PageRequest.of(0, 10));
+    assertThat(byKeyWrongValue.getTotalElements()).isZero();
   }
 
   @Test

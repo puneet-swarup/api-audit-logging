@@ -54,6 +54,8 @@ public class ApiLogController {
       @RequestParam(name = "clientIp", required = false) String clientIp,
       @RequestParam(name = "principalName", required = false) String principalName,
       @RequestParam(name = "errorType", required = false) String errorType,
+      @RequestParam(name = "tagKey", required = false) String tagKey,
+      @RequestParam(name = "tagValue", required = false) String tagValue,
       @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.ASC)
           Pageable pageable) {
     return ResponseEntity.ok(
@@ -69,6 +71,8 @@ public class ApiLogController {
             clientIp,
             principalName,
             errorType,
+            tagKey,
+            tagValue,
             pageable));
   }
 }

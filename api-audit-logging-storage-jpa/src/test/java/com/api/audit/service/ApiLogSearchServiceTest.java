@@ -28,7 +28,20 @@ class ApiLogSearchServiceTest {
     when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(mockPage);
 
     service.search(
-        null, null, null, null, null, null, null, null, null, null, null, Pageable.unpaged());
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        Pageable.unpaged());
 
     verify(repository).findAll(any(Specification.class), any(Pageable.class));
   }

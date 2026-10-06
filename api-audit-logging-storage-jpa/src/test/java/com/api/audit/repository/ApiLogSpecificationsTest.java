@@ -40,7 +40,9 @@ class ApiLogSpecificationsTest {
             200,
             "203.0.113.10",
             "puneet",
-            "HTTP_500");
+            "HTTP_500",
+            "module",
+            "payments");
 
     when(root.get(anyString())).thenReturn(path);
 
@@ -57,6 +59,7 @@ class ApiLogSpecificationsTest {
     verify(cb).equal(root.get("clientIp"), "203.0.113.10");
     verify(cb).equal(root.get("principalName"), "puneet");
     verify(cb).equal(root.get("errorType"), "HTTP_500");
+    verify(cb).like(root.get("tags"), "%\"module\":\"payments\"%");
   }
 
   @Test
@@ -64,7 +67,7 @@ class ApiLogSpecificationsTest {
   void testWithFilters_NullConditions() {
     Specification<ApiAuditLog> spec =
         ApiLogSpecifications.withFilters(
-            null, null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     spec.toPredicate(root, query, cb);
 

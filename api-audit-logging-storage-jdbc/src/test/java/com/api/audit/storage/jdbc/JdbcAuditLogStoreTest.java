@@ -101,6 +101,7 @@ class JdbcAuditLogStoreTest {
             .principalName("puneet")
             .errorType("HTTP_500")
             .errorMessage("Downstream failed")
+            .tags(java.util.Map.of("module", "orders"))
             .timestamp(timestamp)
             .build());
 
@@ -117,6 +118,8 @@ class JdbcAuditLogStoreTest {
             "10.0.0.15",
             "puneet",
             "HTTP_500",
+            null,
+            null,
             PageRequest.of(0, 10));
 
     assertThat(page.getTotalElements()).isEqualTo(1);
@@ -140,6 +143,7 @@ class JdbcAuditLogStoreTest {
     assertThat(record.getPrincipalName()).isEqualTo("puneet");
     assertThat(record.getErrorType()).isEqualTo("HTTP_500");
     assertThat(record.getErrorMessage()).isEqualTo("Downstream failed");
+    assertThat(record.getTags()).containsEntry("module", "orders");
     assertThat(record.getTimestamp()).isEqualTo(timestamp);
   }
 

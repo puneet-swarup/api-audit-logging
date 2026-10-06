@@ -61,7 +61,9 @@ public class ApiLogSpecifications {
       Integer httpStatus,
       String clientIp,
       String principalName,
-      String errorType) {
+      String errorType,
+      String tagKey,
+      String tagValue) {
 
     return (root, query, cb) -> {
       List<Predicate> predicates = new ArrayList<>();
@@ -90,6 +92,7 @@ public class ApiLogSpecifications {
       addEqualIfPresent(predicates, cb, root, "clientIp", clientIp);
       addEqualIfPresent(predicates, cb, root, "principalName", principalName);
       addEqualIfPresent(predicates, cb, root, "errorType", errorType);
+      addTagPredicate(predicates, cb, root, tagKey, tagValue);
 
       if (predicates.isEmpty()) {
         return cb.conjunction();
@@ -106,6 +109,36 @@ public class ApiLogSpecifications {
       String value) {
     if (value != null) {
       predicates.add(cb.equal(root.get(field), value));
+    }
+  }
+
+  /**
+   * Adds a predicate that matches records carrying a given tag.
+   *
+   * <p>Tags are stored in a single text column as a compact JSON object (for example {@code
+   * {"module":"payments","tier":"critical"}}), so filtering is expressed as a {@code LIKE} on the
+   * serialized form. When only a key is supplied, any value for that key matches. When a value is
+   * also supplied, the exact {@code "key":"value"} pair must appear.
+   *
+   * @param predicates the predicate list to append to
+   * @param cb the criteria builder
+   * @param root the query root
+   * @param tagKey the tag key to require; {@code null} means no tag filter
+   * @param tagValue the tag value to require; {@code null} means any value for {@code tagKey}
+   */
+  private static void addTagPredicate(
+      List<Predicate> predicates,
+      jakarta.persistence.criteria.CriteriaBuilder cb,
+      jakarta.persistence.criteria.Root<ApiAuditLog> root,
+      String tagKey,
+      String tagValue) {
+    if (tagKey == null || tagKey.isBlank()) {
+      return;
+    }
+    if (tagValue == null) {
+      predicates.add(cb.like(root.get("tags"), "%\"" + tagKey + "\":%"));
+    } else {
+      predicates.add(cb.like(root.get("tags"), "%\"" + tagKey + "\":\"" + tagValue + "\"%"));
     }
   }
 }

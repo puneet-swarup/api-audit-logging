@@ -397,6 +397,7 @@ When the active storage module implements `AuditLogSearchStore`, the starter exp
 
 ```http
 GET /internal/audit-logs?correlationId=abc&type=INCOMING&method=GET&httpStatus=200
+GET /internal/audit-logs?tagKey=module&tagValue=payments
 X-Audit-Api-Key: your-secret
 ```
 
@@ -404,8 +405,10 @@ The endpoint is fail-secure. If `audit.logging.internal.api-key` is missing or b
 blocked.
 
 Supported filters are `correlationId`, `start`, `end`, `type`, `url`, `serviceName`, `method`,
-`httpStatus`, `clientIp`, `principalName`, and `errorType`. Date filters use ISO date-time values.
-The JPA, JDBC, and memory stores all honor the same filter contract.
+`httpStatus`, `clientIp`, `principalName`, `errorType`, `tagKey`, and `tagValue`. Date filters use
+ISO date-time values. Use `tagKey` alone to match any record carrying that tag, or `tagKey` with
+`tagValue` to match an exact key/value pair. The JPA, JDBC, and memory stores all honor the same
+filter contract.
 
 Common log types are `INCOMING`, `INCOMING_ERROR`, `OUTGOING`, `OUTGOING_ERROR`, and
 `OUTGOING_TRANSPORT_ERROR`. Transport errors represent outbound calls that failed before an HTTP

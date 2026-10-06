@@ -33,6 +33,9 @@ public interface AuditLogSearchStore {
    * @param clientIp filter by exact client IP; null = ignore
    * @param principalName filter by exact authenticated principal name; null = ignore
    * @param errorType filter by exact error type; null = ignore
+   * @param tagKey filter to records that carry this tag key; null = ignore
+   * @param tagValue when {@code tagKey} is set, additionally require the tag value to equal this;
+   *     null = match any value for the key
    * @param pageable pagination and sorting instructions; never {@code null}
    * @return a page of matching records; empty page if none match
    */
@@ -48,5 +51,7 @@ public interface AuditLogSearchStore {
       String clientIp,
       String principalName,
       String errorType,
+      String tagKey,
+      String tagValue,
       Pageable pageable);
 }

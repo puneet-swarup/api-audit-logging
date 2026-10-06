@@ -38,6 +38,8 @@ public class JpaAuditLogSearchStore implements AuditLogSearchStore {
       String clientIp,
       String principalName,
       String errorType,
+      String tagKey,
+      String tagValue,
       Pageable pageable) {
     return repository
         .findAll(
@@ -52,7 +54,9 @@ public class JpaAuditLogSearchStore implements AuditLogSearchStore {
                 httpStatus,
                 clientIp,
                 principalName,
-                errorType),
+                errorType,
+                tagKey,
+                tagValue),
             pageable)
         .map(this::toRecord);
   }

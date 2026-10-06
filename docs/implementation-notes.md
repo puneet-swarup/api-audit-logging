@@ -116,3 +116,20 @@
 - Tests added: `JsonTreePayloadMaskerTest` (nested/array/types/escapes/non-JSON/malformed),
   security filter lookalike + child-path tests, correlation sanitization tests.
 - Full build GREEN.
+
+## PHASE 2 — Capture Modes & Metadata (2026-10-06)
+- Tag filtering on the search surface:
+  - `AuditLogSearchStore.search(...)` gained `tagKey` and `tagValue` params.
+  - `ApiLogController` exposes `?tagKey=...&tagValue=...`.
+  - JPA (`ApiLogSpecifications.addTagPredicate`), JDBC (`buildWhereClause`), and memory
+    (`matchesTags`) all honor the same contract: tagKey alone = any record carrying the key;
+    tagKey+tagValue = exact pair. Tags are stored as JSON text, so JPA/JDBC use LIKE on the
+    serialized `"key":"value"` pair; memory compares the parsed map directly.
+- Capture modes documented for downstream consumers in `docs/kafka-siem-consumer-guide.md`
+  (FULL/METADATA_ONLY/BODY_ONLY effects on the event, plus tags for routing). Noted that outbound
+  client capture is NOT policy-governed and always captures full records.
+- README: filter list + HTTP example updated with tag filters; config reference already lists policies.
+- Tests: memory tag-filter test (key, key+value, wrong value), JDBC tags round-trip + tag filter
+  params, JPA spec tag predicate assertion, demo tag-filter integration test. Controller/search
+  service/spec tests updated for the new signature.
+- Full build GREEN.

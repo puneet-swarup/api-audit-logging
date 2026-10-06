@@ -3,6 +3,7 @@
 - Replaced regex-based masking with a JSON-tree `PayloadMasker` SPI and default `JsonTreePayloadMasker` that correctly masks nested objects, arrays, and non-string values without corrupting payloads; `JsonMasker` is retained as a delegating facade
 - Hardened the internal endpoint security filter with constant-time API-key comparison and exact/child path matching
 - Sanitized inbound `X-Correlation-ID` values (control-character stripping, length clamp) to prevent log/MDC injection
+- Added `tagKey`/`tagValue` filters to the internal audit search endpoint and all searchable stores (JPA, JDBC, memory)
 
 - Added a pluggable audit policy engine (`AuditDecisionEngine`) that resolves one decision per request from one or more `AuditPolicy` sources
 - Added configuration-driven, zero-code-change path-based auditing via `audit.logging.policies.path-based.rules`

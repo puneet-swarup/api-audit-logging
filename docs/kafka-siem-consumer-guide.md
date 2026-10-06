@@ -79,11 +79,50 @@ The Kafka message contains the shared `AuditLogRecord` model. A typical event lo
   "principalName": "puneet",
   "errorType": "HTTP_504",
   "errorMessage": "Gateway Timeout",
-  "timestamp": "2026-05-25T04:42:00.000"
+  "timestamp": "2026-05-25T04:42:00.000",
+  "tags": {
+    "module": "payments",
+    "tier": "critical"
+  }
 }
 ```
 
 Sensitive headers and configured sensitive JSON fields are masked before the record reaches Kafka.
+
+## Capture Modes and Tags
+
+Path-based auditing can shape each record before it reaches Kafka, which helps control cost and
+privacy in a central pipeline.
+
+`capture` controls how much of the exchange is stored:
+
+| Capture mode | Headers | Bodies | Effect on the Kafka event |
+|---|---|---|---|
+| `FULL` (default) | yes | yes | Complete request/response payloads |
+| `METADATA_ONLY` | yes | no | `requestBody`/`responseBody` are null |
+| `BODY_ONLY` | no | yes | `requestHeaders`/`responseHeaders` are null |
+
+Example configuration:
+
+    audit:
+      logging:
+        policies:
+          path-based:
+            enabled: true
+            rules:
+              - pattern: /api/v1/payments/**
+                capture: FULL
+                tags:
+                  module: payments
+                  tier: critical
+              - pattern: /api/v1/orders/**
+                capture: METADATA_ONLY
+                tags:
+                  module: orders
+
+The `tags` map is carried on the record and can drive downstream routing, filtering, and alerting
+(for example, `tags.module = "payments" AND tags.tier = "critical"`). Outbound client capture
+(Feign, RestTemplate, WebClient) is not governed by path rules and always captures full records.
 
 ## Recommended Topic Design
 

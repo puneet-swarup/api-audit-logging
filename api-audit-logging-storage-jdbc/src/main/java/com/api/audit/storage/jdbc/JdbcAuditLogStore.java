@@ -80,6 +80,8 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
       String clientIp,
       String principalName,
       String errorType,
+      String tagKey,
+      String tagValue,
       Pageable pageable) {
 
     QueryParts query =
@@ -94,7 +96,9 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
             httpStatus,
             clientIp,
             principalName,
-            errorType);
+            errorType,
+            tagKey,
+            tagValue);
     List<Object> pageArgs = new ArrayList<>(query.args());
     pageArgs.add(pageable.getPageSize());
     pageArgs.add(pageable.getOffset());
@@ -127,7 +131,9 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
       Integer httpStatus,
       String clientIp,
       String principalName,
-      String errorType) {
+      String errorType,
+      String tagKey,
+      String tagValue) {
     List<String> clauses = new ArrayList<>();
     List<Object> args = new ArrayList<>();
 
@@ -160,6 +166,15 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
     addEqualIfPresent(clauses, args, "client_ip", clientIp);
     addEqualIfPresent(clauses, args, "principal_name", principalName);
     addEqualIfPresent(clauses, args, "error_type", errorType);
+    if (tagKey != null && !tagKey.isBlank()) {
+      if (tagValue == null) {
+        clauses.add("tags LIKE ?");
+        args.add("%\"" + tagKey + "\":%");
+      } else {
+        clauses.add("tags LIKE ?");
+        args.add("%\"" + tagKey + "\":\"" + tagValue + "\"%");
+      }
+    }
 
     return new QueryParts(clauses.isEmpty() ? "" : "WHERE " + String.join(" AND ", clauses), args);
   }

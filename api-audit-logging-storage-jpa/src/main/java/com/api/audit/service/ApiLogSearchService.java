@@ -53,7 +53,7 @@ public class ApiLogSearchService {
    * @param pageable pagination parameters including page number, size, and sorting instructions
    * @return a {@link Page} of {@link ApiAuditLog} entities matching the specified criteria
    * @see ApiLogSpecifications#withFilters(LocalDateTime, LocalDateTime, String, String, String,
-   *     String, String, Integer, String, String, String)
+   *     String, String, Integer, String, String, String, String, String)
    */
   public Page<ApiAuditLog> search(
       LocalDateTime start,
@@ -67,6 +67,8 @@ public class ApiLogSearchService {
       String clientIp,
       String principalName,
       String errorType,
+      String tagKey,
+      String tagValue,
       Pageable pageable) {
 
     return repository.findAll(
@@ -81,7 +83,9 @@ public class ApiLogSearchService {
             httpStatus,
             clientIp,
             principalName,
-            errorType),
+            errorType,
+            tagKey,
+            tagValue),
         pageable);
   }
 }

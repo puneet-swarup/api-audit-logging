@@ -28,15 +28,31 @@ class ApiLogControllerTest {
   @DisplayName("GIVEN GET request WHEN getLogs called THEN return 200 OK")
   void testGetLogs() {
     when(searchStore.search(
-            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+            any(), any()))
         .thenReturn(Page.empty());
 
     ResponseEntity<?> response =
         controller.getLogs(
-            null, null, null, null, null, null, null, null, null, null, null, Pageable.unpaged());
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Pageable.unpaged());
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     verify(searchStore, times(1))
-        .search(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        .search(
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+            any(), any());
   }
 }
