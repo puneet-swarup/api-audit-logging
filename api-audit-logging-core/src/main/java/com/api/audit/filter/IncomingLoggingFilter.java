@@ -152,9 +152,45 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
   }
 
   private void initializeMdc(HttpServletRequest req) {
-    String cid = req.getHeader(CorrelationContext.CORRELATION_ID_HEADER);
+    String cid = sanitizeCorrelationId(req.getHeader(CorrelationContext.CORRELATION_ID_HEADER));
     MDC.put(
         CorrelationContext.CORRELATION_ID_HEADER, cid != null ? cid : UUID.randomUUID().toString());
+  }
+
+  /**
+   * Sanitises an inbound correlation ID before it is placed in the MDC and persisted.
+   *
+   * <p>The header is caller-controlled, so it is clamped in length and restricted to a safe
+   * character set to prevent log injection, MDC pollution, and oversized records. A value that is
+   * blank or contains only unsafe characters is discarded so a fresh UUID is generated instead.
+   *
+   * @param raw the raw header value; may be {@code null}
+   * @return a safe value, or {@code null} when none could be derived
+   */
+  static String sanitizeCorrelationId(String raw) {
+    if (raw == null) {
+      return null;
+    }
+    String trimmed = raw.strip();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+    StringBuilder safe = new StringBuilder(Math.min(trimmed.length(), 128));
+    for (int i = 0; i < trimmed.length() && safe.length() < 128; i++) {
+      char c = trimmed.charAt(i);
+      boolean allowed =
+          (c >= 'a' && c <= 'z')
+              || (c >= 'A' && c <= 'Z')
+              || (c >= '0' && c <= '9')
+              || c == '-'
+              || c == '_'
+              || c == '.'
+              || c == ':';
+      if (allowed) {
+        safe.append(c);
+      }
+    }
+    return safe.length() == 0 ? null : safe.toString();
   }
 
   private void processAuditCapture(

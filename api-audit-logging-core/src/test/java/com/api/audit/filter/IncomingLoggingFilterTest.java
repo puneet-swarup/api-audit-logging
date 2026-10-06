@@ -224,4 +224,28 @@ class IncomingLoggingFilterTest {
     assertEquals(ServletException.class.getName(), eventCaptor.getValue().record().getErrorType());
     assertEquals("Controller failed", eventCaptor.getValue().record().getErrorMessage());
   }
+
+  @Test
+  @DisplayName("GIVEN a malicious correlation ID WHEN processed THEN it is sanitized")
+  void correlationIdIsSanitized() {
+    String malicious = "abc\ndef\rghi\u0000<script>";
+    String sanitized = IncomingLoggingFilter.sanitizeCorrelationId(malicious);
+    assertEquals("abcdefghiscript", sanitized);
+  }
+
+  @Test
+  @DisplayName("GIVEN an over-long correlation ID WHEN sanitized THEN it is clamped to 128 chars")
+  void correlationIdIsClamped() {
+    String longId = "a".repeat(500);
+    String sanitized = IncomingLoggingFilter.sanitizeCorrelationId(longId);
+    assertNotNull(sanitized);
+    assertEquals(128, sanitized.length());
+  }
+
+  @Test
+  @DisplayName("GIVEN a blank correlation ID WHEN sanitized THEN null is returned")
+  void blankCorrelationIdReturnsNull() {
+    assertNull(IncomingLoggingFilter.sanitizeCorrelationId("   "));
+    assertNull(IncomingLoggingFilter.sanitizeCorrelationId(null));
+  }
 }

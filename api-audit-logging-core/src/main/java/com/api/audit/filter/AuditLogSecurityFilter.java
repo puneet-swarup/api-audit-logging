@@ -44,8 +44,10 @@ public class AuditLogSecurityFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
 
-    // Only apply security check to the internal audit endpoint
-    if (!request.getRequestURI().startsWith(PROTECTED_PATH)) {
+    // Only apply the security check to the internal audit endpoint. The match must be exact or a
+    // child path (e.g. /internal/audit-logs/42), never a prefix, so a lookalike path such as
+    // /internal/audit-logs-evil is not accidentally treated as protected.
+    if (!isProtectedPath(request.getRequestURI())) {
       chain.doFilter(request, response);
       return;
     }
@@ -63,7 +65,7 @@ public class AuditLogSecurityFilter extends OncePerRequestFilter {
 
     String providedKey = request.getHeader(API_KEY_HEADER);
 
-    if (!configuredKey.equals(providedKey)) {
+    if (!constantTimeEquals(configuredKey, providedKey)) {
       log.warn(
           "[AuditLog] Unauthorised request to {} — invalid or missing {} header.",
           PROTECTED_PATH,
@@ -73,6 +75,38 @@ public class AuditLogSecurityFilter extends OncePerRequestFilter {
     }
 
     chain.doFilter(request, response);
+  }
+
+  /**
+   * Returns whether the request path targets the protected endpoint. A path matches when it equals
+   * the protected path exactly or is a child of it, but never when it merely shares a prefix (so
+   * {@code /internal/audit-logs-evil} is not protected).
+   *
+   * @param path the request URI path
+   * @return {@code true} when the path is protected
+   */
+  private boolean isProtectedPath(String path) {
+    if (path == null) {
+      return false;
+    }
+    return path.equals(PROTECTED_PATH) || path.startsWith(PROTECTED_PATH + "/");
+  }
+
+  /**
+   * Compares two strings in a way that does not short-circuit on the first differing character, to
+   * avoid leaking information about the configured key through response timing.
+   *
+   * @param expected the configured key; never {@code null}
+   * @param provided the value supplied by the caller; may be {@code null}
+   * @return {@code true} when both values are equal
+   */
+  private boolean constantTimeEquals(String expected, String provided) {
+    if (provided == null) {
+      return false;
+    }
+    return java.security.MessageDigest.isEqual(
+        expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+        provided.getBytes(java.nio.charset.StandardCharsets.UTF_8));
   }
 
   private void sendError(HttpServletResponse response, HttpStatus status, String message)

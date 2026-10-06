@@ -96,3 +96,23 @@
 - NOTE for future: any new AuditLogRecord field MUST be added to ApiLogListener.mask() AND to all
   storage stores (JPA/JDBC/memory) + outbound client record builders. This is a known fragility;
   Phase 5 module hygiene should consider a record-level copy/mask API to prevent this class of bug.
+
+## PHASE 3 — Correctness & Security (2026-10-06)
+- Replaced the regex-based masking with a JSON-tree masker:
+  - New SPI: `com.api.audit.mask.PayloadMasker`.
+  - New default impl: `com.api.audit.mask.JsonTreePayloadMasker` — walks the parsed JSON tree,
+    masks sensitive keys at any depth (objects AND arrays), masks any value type (string/number/
+    boolean/null/object), handles escaped quotes and complex values without corruption, and leaves
+    non-JSON payloads untouched (never throws). Configurable max depth (default 64).
+  - `JsonMasker` is now a thin backward-compatible facade delegating to the active `PayloadMasker`.
+  - Auto-config registers `PayloadMasker` with `@ConditionalOnMissingBean`, so a user bean wins.
+- Security filter hardening (`AuditLogSecurityFilter`):
+  - Constant-time API-key comparison via `MessageDigest.isEqual` (no timing side-channel).
+  - Exact/child path matching (`/internal/audit-logs` or `/internal/audit-logs/...`), so
+    `/internal/audit-logs-evil` is NOT treated as protected.
+- Correlation-ID sanitization (`IncomingLoggingFilter.sanitizeCorrelationId`): strips control
+  chars/newlines/angle brackets, clamps to 128 chars, discards blank — prevents log/MDC injection
+  and oversized records. Applied to the inbound `X-Correlation-ID` header.
+- Tests added: `JsonTreePayloadMaskerTest` (nested/array/types/escapes/non-JSON/malformed),
+  security filter lookalike + child-path tests, correlation sanitization tests.
+- Full build GREEN.

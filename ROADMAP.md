@@ -9,6 +9,8 @@ and Kafka sinks. The items below are the next steps to make the project even str
 - Configuration-driven, zero-code-change path-based auditing (Phase 1). See the
   [Path-Based Auditing Guide](docs/path-based-auditing-guide.md).
 - Pluggable `AuditPolicy` engine with `AuditDecision`, capture modes, and a custom-policy SPI.
+- JSON-tree payload masking behind a `PayloadMasker` SPI (correct nested/array/typed masking).
+- Hardened internal endpoint security (constant-time key compare, exact path match) and correlation-ID sanitization.
 
 ## Near Term
 

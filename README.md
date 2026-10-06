@@ -421,8 +421,14 @@ the endpoint with network controls, Spring Security, gateway rules, TLS, and sec
 
 ## Payload Masking
 
-`JsonMasker` redacts common sensitive fields before records reach storage. Built-in fields include
-`password`, `token`, `cvv`, `cardNumber`, `secret`, and `authorization`.
+Masking runs before any storage backend receives a record, so every sink benefits automatically.
+The default implementation, `JsonTreePayloadMasker`, parses the payload and masks sensitive fields
+by walking the JSON tree. It correctly handles nested objects and arrays, masks values of any type
+(string, number, boolean), and never corrupts payloads that contain commas, braces, or quotes.
+Payloads that are not JSON (for example XML or form data) are left unchanged rather than rejected.
+
+Built-in fields include `password`, `token`, `cvv`, `cardNumber`, `secret`, and `authorization`.
+Matching is case-insensitive and by containment, so `card` matches both `cardNumber` and `debitCard`.
 
 Add domain-specific fields as needed:
 
@@ -434,6 +440,13 @@ audit:
         - otp
         - nationalId
         - pin
+
+To use a custom redaction strategy, register a PayloadMasker bean. It replaces the default JSON-tree masker automatically:
+
+    @Bean
+    PayloadMasker payloadMasker() {
+      return payload -> myRulesEngine.redact(payload);
+    }
 ```
 
 ## Testing

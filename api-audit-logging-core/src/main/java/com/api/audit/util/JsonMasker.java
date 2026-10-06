@@ -1,24 +1,19 @@
 package com.api.audit.util;
 
 import com.api.audit.config.AuditLoggingProperties;
-import java.util.List;
-import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import com.api.audit.mask.JsonTreePayloadMasker;
+import com.api.audit.mask.PayloadMasker;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring component that redacts sensitive information from JSON strings before persistence.
+ * Backward-compatible facade over the active {@link PayloadMasker}.
  *
- * <p>Two layers of masking are applied:
+ * <p>Historically this class performed masking itself using regular expressions. That approach
+ * could corrupt payloads and only masked string-valued fields. Masking is now delegated to a {@link
+ * PayloadMasker}, and the default implementation is the JSON-aware {@link JsonTreePayloadMasker}.
  *
- * <ol>
- *   <li><b>Built-in defaults</b> — always applied, regardless of configuration: {@code password,
- *       token, cvv, cardNumber, secret, authorization}.
- *   <li><b>Consumer-configured</b> — additional fields specified via {@code
- *       audit.logging.masking.additional-fields}.
- * </ol>
- *
- * <p>Matching is case-insensitive and uses a contains-check on the JSON key name.
+ * <p>This facade is retained so existing callers and tests keep working unchanged. New code should
+ * depend on {@link PayloadMasker} directly.
  *
  * <p>Example transformation:
  *
@@ -28,54 +23,40 @@ import org.springframework.stereotype.Component;
  * }</pre>
  *
  * @author Puneet Swarup
+ * @see PayloadMasker
+ * @see JsonTreePayloadMasker
  */
-@Slf4j
 @Component
 public class JsonMasker {
 
-  private static final String MASK = "\"******\"";
-  private static final String REGEX_PATTERN = "(?i)\"(%s)\"\\s*:\\s*\"?([^,\"}]+)\"?";
+  private final PayloadMasker delegate;
 
   /**
-   * Built-in sensitive keys — always masked, non-configurable. These cover the most common
-   * compliance requirements (GDPR, PCI-DSS).
-   */
-  private static final List<String> BUILT_IN_KEYS =
-      List.of("password", "token", "cvv", "cardNumber", "secret", "authorization");
-
-  private final List<String> allSensitiveKeys;
-
-  /**
-   * Constructs the masker by merging built-in defaults with consumer-configured fields.
+   * Creates the facade using the default JSON-tree masker built from the supplied properties.
    *
    * @param properties the library configuration properties
    */
   public JsonMasker(AuditLoggingProperties properties) {
-    List<String> additional = properties.getMasking().getAdditionalFields();
-    this.allSensitiveKeys =
-        Stream.concat(BUILT_IN_KEYS.stream(), additional.stream()).distinct().toList();
-
-    if (!additional.isEmpty()) {
-      log.debug(
-          "[AuditLog] JsonMasker initialised with {} built-in + {} additional sensitive fields.",
-          BUILT_IN_KEYS.size(),
-          additional.size());
-    }
+    this(new JsonTreePayloadMasker(properties));
   }
 
   /**
-   * Sanitizes a JSON string by masking values of all configured sensitive keys.
+   * Creates the facade over an explicit delegate. Used by auto-configuration to inject the active
+   * {@link PayloadMasker} bean (which may be a user-supplied implementation).
    *
-   * @param json the raw JSON string to be processed
-   * @return the sanitized JSON string, or {@code null} if the input was null
+   * @param delegate the masker to delegate to; never {@code null}
+   */
+  public JsonMasker(PayloadMasker delegate) {
+    this.delegate = delegate;
+  }
+
+  /**
+   * Sanitizes a payload by delegating to the configured {@link PayloadMasker}.
+   *
+   * @param json the raw payload string to be processed
+   * @return the sanitized payload, or {@code null} if the input was null
    */
   public String mask(String json) {
-    if (json == null) return null;
-
-    String masked = json;
-    for (String key : allSensitiveKeys) {
-      masked = masked.replaceAll(String.format(REGEX_PATTERN, key), "\"$1\":" + MASK);
-    }
-    return masked;
+    return delegate.mask(json);
   }
 }

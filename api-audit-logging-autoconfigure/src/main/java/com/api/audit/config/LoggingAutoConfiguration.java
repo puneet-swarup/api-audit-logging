@@ -5,6 +5,8 @@ import com.api.audit.filter.AuditLogSecurityFilter;
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.interceptor.AuditLogInterceptor;
 import com.api.audit.listener.ApiLogListener;
+import com.api.audit.mask.JsonTreePayloadMasker;
+import com.api.audit.mask.PayloadMasker;
 import com.api.audit.policy.AnnotationAuditPolicy;
 import com.api.audit.policy.AuditDecisionEngine;
 import com.api.audit.policy.AuditPolicy;
@@ -254,9 +256,15 @@ public class LoggingAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(PayloadMasker.class)
+  public PayloadMasker payloadMasker() {
+    return new JsonTreePayloadMasker(properties);
+  }
+
+  @Bean
   @ConditionalOnMissingBean
-  public JsonMasker jsonMasker() {
-    return new JsonMasker(properties);
+  public JsonMasker jsonMasker(PayloadMasker payloadMasker) {
+    return new JsonMasker(payloadMasker);
   }
 
   @Bean

@@ -88,4 +88,30 @@ class AuditLogSecurityFilterTest {
 
     verify(chain).doFilter(req, res);
   }
+
+  @Test
+  @DisplayName("Lookalike path is NOT protected (prefix must not match)")
+  void lookalikePath_isNotProtected() throws Exception {
+    properties.getInternal().setApiKey(null);
+    MockHttpServletRequest req = new MockHttpServletRequest("GET", "/internal/audit-logs-evil");
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    filter.doFilterInternal(req, res, chain);
+
+    verify(chain).doFilter(req, res);
+    assertThat(res.getStatus()).isEqualTo(200);
+  }
+
+  @Test
+  @DisplayName("Child path is protected and requires the key")
+  void childPath_isProtected() throws Exception {
+    properties.getInternal().setApiKey("my-secret");
+    MockHttpServletRequest req = new MockHttpServletRequest("GET", "/internal/audit-logs/42");
+    MockHttpServletResponse res = new MockHttpServletResponse();
+
+    filter.doFilterInternal(req, res, chain);
+
+    assertThat(res.getStatus()).isEqualTo(401);
+    verifyNoInteractions(chain);
+  }
 }
