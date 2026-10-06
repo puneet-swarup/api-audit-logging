@@ -1,0 +1,10 @@
+# Profile: memory
+# Uses the in-memory store (no database) for quick experiments.
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=memory"
+
+audit:
+  logging:
+    storage:
+      type: memory
+    flyway:
+      enabled: false

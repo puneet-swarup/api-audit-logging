@@ -46,7 +46,7 @@ subprojects {
 }
 
 // Publishing and Spotless only for library modules (not demo app)
-configure(subprojects.findAll { it.name != 'api-audit-demo-app' }) {
+configure(subprojects.findAll { it.name != 'api-audit-demo-app' && it.name != 'api-audit-logging-examples' }) {
     apply plugin: 'jacoco'
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'com.vanniktech.maven.publish.base'

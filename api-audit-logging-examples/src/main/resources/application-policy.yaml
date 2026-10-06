@@ -1,0 +1,11 @@
+# Profile: policy
+# Demonstrates a custom AuditPolicy bean that audits based on a request header.
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=policy"
+#
+#   curl -H "X-Audit: on" -H "X-Tenant: acme" http://localhost:8080/examples/annotation/hello
+
+audit:
+  logging:
+    examples:
+      policy:
+        enabled: true

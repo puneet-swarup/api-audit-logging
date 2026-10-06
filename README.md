@@ -346,6 +346,13 @@ call a real local service instead of the placeholder URL.
 For cross-service trace examples using `X-Correlation-ID`, see the
 [Multi-Service Correlation Guide](docs/multi-service-correlation-guide.md).
 
+## Comprehensive Examples
+
+The [`api-audit-logging-examples`](api-audit-logging-examples/README.md) module is a runnable
+cookbook covering every option and feature: annotation and path-based capture, all rule options,
+capture modes, masking, custom policies, custom maskers, sampling, every storage sink, and every
+outbound client. Start there when integrating the library into a production service.
+
 ## Configuration Reference
 
 All properties use the `audit.logging` prefix.

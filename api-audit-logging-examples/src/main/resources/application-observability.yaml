@@ -1,0 +1,10 @@
+# Profile: observability
+# Demonstrates sampling and metrics. Sample rate 0.25 keeps ~1 in 4 successes; errors always kept.
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=observability"
+
+audit:
+  logging:
+    sampling:
+      enabled: true
+      sample-rate: 0.25
+      always-capture-errors: true

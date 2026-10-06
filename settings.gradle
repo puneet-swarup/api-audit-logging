@@ -13,3 +13,6 @@ include 'api-audit-logging-autoconfigure'
 include 'api-audit-logging-starter'
 
 include 'api-audit-demo-app'
+
+// Comprehensive, runnable examples for every option and feature
+include 'api-audit-logging-examples'

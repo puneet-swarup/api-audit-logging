@@ -1,0 +1,22 @@
+plugins {
+	id 'org.springframework.boot'
+}
+
+dependencies {
+	// Every module so the examples can demonstrate all storage and client integrations.
+	implementation project(':api-audit-logging-starter')
+	implementation project(':api-audit-logging-storage-jdbc')
+	implementation project(':api-audit-logging-storage-memory')
+	implementation project(':api-audit-logging-storage-kafka')
+	implementation project(':api-audit-logging-client-feign')
+	implementation project(':api-audit-logging-client-resttemplate')
+	implementation project(':api-audit-logging-client-webclient')
+
+	runtimeOnly 'com.h2database:h2'
+
+	testImplementation "org.awaitility:awaitility:${awaitilityVersion}"
+}
+
+// Examples app produces an executable JAR and is never published.
+bootJar { enabled = true }
+jar { enabled = false }

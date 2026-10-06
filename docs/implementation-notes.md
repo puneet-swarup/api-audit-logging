@@ -176,3 +176,15 @@
     `@ConditionalOnExpression` string literals across modules; converting risks breaking conditional
     wiring for little gain.
 - Full build GREEN.
+
+## EXAMPLES MODULE — Comprehensive Cookbook (2026-10-06)
+- New module `api-audit-logging-examples` (not published; bootJar only).
+- Every feature has a named example class (SOLID single-responsibility) under a feature package:
+  annotation, pathbased, masking, policy, clients.
+- Profiles: pathbased, masking, policy, observability, memory (each with an application-*.yaml).
+- Cookbook README maps every option -> class -> endpoint -> observable effect.
+- Integration tests prove each documented effect on stored records:
+  PathBasedRulesExampleTest, MaskingExampleTest, HeaderBasedAuditPolicyTest.
+- Client examples: Feign, RestTemplate, RestClient, WebClient (ClientConfiguration exposes the
+  Spring-managed clients so the library customizers apply).
+- Full build GREEN (all modules incl. examples).

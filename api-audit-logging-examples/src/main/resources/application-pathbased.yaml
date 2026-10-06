@@ -1,0 +1,53 @@
+# Profile: pathbased
+# Demonstrates every path-based rule option with NO annotations on the controller.
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=pathbased"
+
+audit:
+  logging:
+    policies:
+      annotation:
+        # Keep annotation auditing on so annotated examples still work alongside path rules.
+        enabled: true
+      path-based:
+        enabled: true
+        rules:
+          # 1) Broad Ant rule with description, tags, and FULL capture.
+          - pattern: /examples/pathbased/hello
+            description: Path rule - Ant + tags + FULL
+            capture: FULL
+            tags:
+              module: examples
+              audited-by: path-rule
+              tier: standard
+
+          # 2) METADATA_ONLY: headers/status/timing stored, bodies not.
+          - pattern: /examples/pathbased/metadata
+            description: Path rule - METADATA_ONLY
+            capture: METADATA_ONLY
+            tags:
+              capture-mode: metadata-only
+
+          # 3) BODY_ONLY: bodies stored, headers not.
+          - pattern: /examples/pathbased/body-only
+            description: Path rule - BODY_ONLY
+            capture: BODY_ONLY
+            tags:
+              capture-mode: body-only
+
+          # 4) Method-scoped rule: only POST/PUT/PATCH on /mutations are audited.
+          - pattern: /examples/pathbased/mutations
+            methods: [POST, PUT, PATCH]
+            description: Path rule - method-scoped
+            tags:
+              kind: mutation
+
+          # 5) Regex matcher rule for versioned order paths.
+          - pattern: /examples/pathbased/orders/.*
+            matcher: REGEX
+            description: Path rule - regex matcher
+            tags:
+              matcher: regex
+
+          # 6) Explicit skip rule: never audit this path.
+          - pattern: /examples/pathbased/skip
+            audit: false

@@ -11,6 +11,9 @@ and Kafka sinks. The items below are the next steps to make the project even str
 - Pluggable `AuditPolicy` engine with `AuditDecision`, capture modes, and a custom-policy SPI.
 - JSON-tree payload masking behind a `PayloadMasker` SPI (correct nested/array/typed masking).
 - Hardened internal endpoint security (constant-time key compare, exact path match) and correlation-ID sanitization.
+- Sampling, drop metrics, and backpressure visibility.
+- Copy-safe record masking (`toBuilder`) and core dependency-direction guardrail.
+- A comprehensive `api-audit-logging-examples` cookbook module covering every option and feature.
 
 ## Near Term
 

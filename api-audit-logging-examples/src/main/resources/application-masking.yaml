@@ -1,0 +1,16 @@
+# Profile: masking
+# Demonstrates masking built-in and configured sensitive fields, plus a custom PayloadMasker.
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=masking"
+
+audit:
+  logging:
+    masking:
+      # Extra domain-specific sensitive fields, in addition to the built-in defaults.
+      additional-fields:
+        - otp
+        - nationalId
+        - pin
+    examples:
+      masking:
+        # Registers CustomPayloadMasker, which also scrubs email addresses.
+        custom-masker: true

@@ -8,6 +8,7 @@
 - Added `AuditMetrics.recordDropped` and `api.audit.records.dropped` counter; rejection-policy drops and sampled-out records are now observable
 - Made `AuditLogRecord` copy-safe (`toBuilder`) and refactored masking to never drop fields
 - Added dependency-direction guardrail test and fail-fast `@Pattern` validation for `storage.type`
+- Added the `api-audit-logging-examples` module: a runnable cookbook covering every option, feature, and integration with integration tests
 
 - Added a pluggable audit policy engine (`AuditDecisionEngine`) that resolves one decision per request from one or more `AuditPolicy` sources
 - Added configuration-driven, zero-code-change path-based auditing via `audit.logging.policies.path-based.rules`

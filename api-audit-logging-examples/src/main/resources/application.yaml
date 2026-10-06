@@ -1,0 +1,37 @@
+# API Audit Logging — Examples
+#
+# Base configuration. Activate a feature profile to see it in action, for example:
+#   .\gradlew.bat :api-audit-logging-examples:bootRun --args="--spring.profiles.active=pathbased"
+#
+# The internal search endpoint is available in every profile so you can inspect what was captured:
+#   GET /internal/audit-logs
+#   Header: X-Audit-Api-Key: examples-key
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-audit-logging-examples
+  datasource:
+    url: jdbc:h2:mem:examplesdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+audit:
+  logging:
+    enabled: true
+    storage:
+      type: jpa
+    flyway:
+      enabled: true
+    internal:
+      api-key: examples-key
+
+examples:
+  downstream:
+    base-url: ${EXAMPLES_DOWNSTREAM_BASE_URL:https://localhost.invalid}
