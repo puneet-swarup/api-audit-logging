@@ -188,3 +188,16 @@
 - Client examples: Feign, RestTemplate, RestClient, WebClient (ClientConfiguration exposes the
   Spring-managed clients so the library customizers apply).
 - Full build GREEN (all modules incl. examples).
+
+## DEPLOYMENT GUIDE (2026-10-06)
+- Added docs/deployment-guide.md: comprehensive, copy-paste deployment reference.
+  - Defaults table (what you get out of the box).
+  - Packaging styles: fat JAR (embedded Tomcat/Jetty), WAR on external container, plain JAR (non-web),
+    Docker/Kubernetes. Each with exact steps and what NOT to do.
+  - Dependency choices: starter vs individual modules (with module reference table).
+  - Storage choices: JPA, JDBC, memory, Kafka.
+  - Every configuration mechanism: bundled YAML, external YAML, env vars, CLI flags, profiles.
+  - Schema: Flyway (library migration) vs own schema vs ddl-auto.
+  - Observability/metrics, security, verification checklist, troubleshooting table, deployment matrix.
+- README links the Deployment Guide.
+- No code changes; docs only.

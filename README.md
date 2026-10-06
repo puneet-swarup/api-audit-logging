@@ -264,6 +264,10 @@ For downstream consumers, SIEM indexing, alert examples, and topic design, see t
 For Maven Central release setup, see the
 [Maven Central Publishing Guide](docs/maven-central-publishing-guide.md).
 
+For a complete, copy-paste reference covering every packaging style (fat JAR, WAR, plain JAR,
+Docker/Kubernetes), storage choice, configuration mechanism, schema handling, and a verification
+checklist, see the [Deployment Guide](docs/deployment-guide.md).
+
 ## Client Integrations
 
 ### Feign
