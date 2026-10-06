@@ -201,3 +201,24 @@
   - Observability/metrics, security, verification checklist, troubleshooting table, deployment matrix.
 - README links the Deployment Guide.
 - No code changes; docs only.
+
+## CORE DECOUPLING — Framework-neutral search SPI (2026-10-06)
+- The storage SPI no longer depends on Spring Data.
+  - New `com.api.audit.query.AuditLogQuery` (immutable value object: all filters + page/size/sort).
+  - New `com.api.audit.query.AuditLogPage<T>` (content + page/size/total, with `map`, `empty`).
+  - `AuditLogSearchStore` now exposes `AuditLogPage<AuditLogRecord> search(AuditLogQuery query)`.
+- `ApiLogController` is the only Spring-Data-aware layer: it accepts a `Pageable`, converts to
+  `AuditLogQuery` (handling `Pageable.unpaged()` safely), and returns `AuditLogPage`. Jackson
+  serializes `AuditLogPage` directly.
+- JPA store builds `Pageable` internally and converts Spring Data `Page` -> `AuditLogPage` at the
+  boundary; Spring Data stays inside the JPA module.
+- JDBC and memory stores implement the neutral contract directly; JDBC now also honors `sortBy`
+  (whitelisted columns) and sort direction.
+- Fixed a real pre-existing bug: the JDBC row mapper called `.tags(...)` five times (copy-paste).
+- Tests updated across core, autoconfigure, JPA, JDBC, memory, examples, and demo; added pagination/
+  sorting and filter-mapping tests. Full build GREEN.
+- BREAKING: this is an SPI signature change. Custom `AuditLogSearchStore` implementations must move
+  from the old parameter list + Spring Data `Page` to `search(AuditLogQuery) -> AuditLogPage`. This is
+  a 3.0.0-class change; the 2.3.0 entry documents it while the project is still pre-3.0.
+- DEFERRED (documented): splitting the god-object `AuditLoggingProperties`; it is high blast radius
+  with low user-visible value and can be done incrementally.

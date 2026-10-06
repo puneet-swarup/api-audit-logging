@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.api.audit.model.AuditLogRecord;
+import com.api.audit.query.AuditLogPage;
+import com.api.audit.query.AuditLogQuery;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditLogStore;
 import java.time.LocalDateTime;
@@ -13,8 +15,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -105,22 +105,23 @@ class JdbcAuditLogStoreTest {
             .timestamp(timestamp)
             .build());
 
-    Page<AuditLogRecord> page =
+    AuditLogPage<AuditLogRecord> page =
         store.search(
-            "corr-jdbc-1",
-            timestamp.minusMinutes(1),
-            timestamp.plusMinutes(1),
-            "OUTGOING",
-            "orders",
-            "order-service",
-            "POST",
-            202,
-            "10.0.0.15",
-            "puneet",
-            "HTTP_500",
-            null,
-            null,
-            PageRequest.of(0, 10));
+            AuditLogQuery.builder()
+                .correlationId("corr-jdbc-1")
+                .start(timestamp.minusMinutes(1))
+                .end(timestamp.plusMinutes(1))
+                .type("OUTGOING")
+                .url("orders")
+                .serviceName("order-service")
+                .method("POST")
+                .httpStatus(202)
+                .clientIp("10.0.0.15")
+                .principalName("puneet")
+                .errorType("HTTP_500")
+                .page(0)
+                .size(10)
+                .build());
 
     assertThat(page.getTotalElements()).isEqualTo(1);
     AuditLogRecord record = page.getContent().getFirst();

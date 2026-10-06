@@ -5,7 +5,9 @@ dependencies {
     // Feign compileOnly — core defines annotation that Feign clients use,
     // but does not force Feign onto consumers/host who don't use it
     compileOnly 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    // Spring Data Commons needed for Page<> in AuditLogSearchStore SPI
+    // Spring Data Commons is used only at the web layer (ApiLogController accepts a Pageable for
+    // HTTP pagination). The storage SPI (AuditLogSearchStore) is framework-neutral and does not
+    // depend on it.
     api 'org.springframework.data:spring-data-commons'
     // Bean Validation API + Hibernate Validator for fail-fast configuration validation
     api 'org.springframework.boot:spring-boot-starter-validation'

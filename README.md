@@ -451,6 +451,11 @@ ISO date-time values. Use `tagKey` alone to match any record carrying that tag, 
 `tagValue` to match an exact key/value pair. The JPA, JDBC, and memory stores all honor the same
 filter contract.
 
+The underlying `AuditLogSearchStore` SPI is framework-neutral: it accepts an `AuditLogQuery` and
+returns an `AuditLogPage`, so a custom store never needs to depend on Spring Data. HTTP pagination
+is handled at the web layer. If you maintain a custom store and are upgrading from an earlier
+version, see the [SPI Migration Guide](docs/spi-migration-guide.md).
+
 Common log types are `INCOMING`, `INCOMING_ERROR`, `OUTGOING`, `OUTGOING_ERROR`, and
 `OUTGOING_TRANSPORT_ERROR`. Transport errors represent outbound calls that failed before an HTTP
 response was available, such as connection, DNS, timeout, or TLS failures.

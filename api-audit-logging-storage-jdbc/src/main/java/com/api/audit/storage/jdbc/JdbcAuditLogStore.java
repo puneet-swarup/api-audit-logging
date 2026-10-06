@@ -1,18 +1,18 @@
 package com.api.audit.storage.jdbc;
 
 import com.api.audit.model.AuditLogRecord;
+import com.api.audit.query.AuditLogPage;
+import com.api.audit.query.AuditLogQuery;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditLogStore;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -30,6 +30,17 @@ import org.springframework.jdbc.core.RowMapper;
 public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
 
   private static final RowMapper<AuditLogRecord> ROW_MAPPER = JdbcAuditLogStore::toRecord;
+
+  /** Columns that may be used for ordering; anything else falls back to {@code timestamp}. */
+  private static final java.util.Set<String> SORTABLE_COLUMNS =
+      java.util.Set.of(
+          "timestamp",
+          "duration",
+          "http_status",
+          "service_name",
+          "type",
+          "method",
+          "correlation_id");
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -66,113 +77,80 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         Timestamp.valueOf(record.getTimestamp()));
   }
 
-  /** Searches records with optional filters and database-level pagination. */
+  /** Searches records with optional filters, ordering, and database-level pagination. */
   @Override
-  public Page<AuditLogRecord> search(
-      String correlationId,
-      LocalDateTime start,
-      LocalDateTime end,
-      String type,
-      String url,
-      String serviceName,
-      String method,
-      Integer httpStatus,
-      String clientIp,
-      String principalName,
-      String errorType,
-      String tagKey,
-      String tagValue,
-      Pageable pageable) {
+  public AuditLogPage<AuditLogRecord> search(AuditLogQuery query) {
+    QueryParts where = buildWhereClause(query);
 
-    QueryParts query =
-        buildWhereClause(
-            correlationId,
-            start,
-            end,
-            type,
-            url,
-            serviceName,
-            method,
-            httpStatus,
-            clientIp,
-            principalName,
-            errorType,
-            tagKey,
-            tagValue);
-    List<Object> pageArgs = new ArrayList<>(query.args());
-    pageArgs.add(pageable.getPageSize());
-    pageArgs.add(pageable.getOffset());
+    List<Object> pageArgs = new ArrayList<>(where.args());
+    pageArgs.add(query.effectiveSize());
+    pageArgs.add(query.offset());
 
+    String orderBy = orderByClause(query);
     List<AuditLogRecord> content =
         jdbcTemplate.query(
-            "SELECT * FROM api_audit_log "
-                + query.whereClause()
-                + " ORDER BY timestamp LIMIT ? OFFSET ?",
+            "SELECT * FROM api_audit_log " + where.whereClause() + orderBy + " LIMIT ? OFFSET ?",
             ROW_MAPPER,
             pageArgs.toArray());
 
     Long total =
         jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM api_audit_log " + query.whereClause(),
+            "SELECT COUNT(*) FROM api_audit_log " + where.whereClause(),
             Long.class,
-            query.args().toArray());
+            where.args().toArray());
 
-    return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    return new AuditLogPage<>(
+        content, query.effectivePage(), query.effectiveSize(), total == null ? 0 : total);
   }
 
-  private QueryParts buildWhereClause(
-      String correlationId,
-      LocalDateTime start,
-      LocalDateTime end,
-      String type,
-      String url,
-      String serviceName,
-      String method,
-      Integer httpStatus,
-      String clientIp,
-      String principalName,
-      String errorType,
-      String tagKey,
-      String tagValue) {
+  private String orderByClause(AuditLogQuery query) {
+    String column = query.getSortBy();
+    if (column == null || !SORTABLE_COLUMNS.contains(column)) {
+      column = "timestamp";
+    }
+    return " ORDER BY " + column + (query.isSortAscending() ? " ASC" : " DESC");
+  }
+
+  private QueryParts buildWhereClause(AuditLogQuery query) {
     List<String> clauses = new ArrayList<>();
     List<Object> args = new ArrayList<>();
 
-    if (correlationId != null) {
+    if (query.getCorrelationId() != null) {
       clauses.add("correlation_id = ?");
-      args.add(correlationId);
+      args.add(query.getCorrelationId());
     }
-    if (start != null) {
+    if (query.getStart() != null) {
       clauses.add("timestamp >= ?");
-      args.add(Timestamp.valueOf(start));
+      args.add(Timestamp.valueOf(query.getStart()));
     }
-    if (end != null) {
+    if (query.getEnd() != null) {
       clauses.add("timestamp <= ?");
-      args.add(Timestamp.valueOf(end));
+      args.add(Timestamp.valueOf(query.getEnd()));
     }
-    if (type != null) {
+    if (query.getType() != null) {
       clauses.add("type = ?");
-      args.add(type);
+      args.add(query.getType());
     }
-    if (url != null) {
+    if (query.getUrl() != null) {
       clauses.add("url LIKE ?");
-      args.add("%" + url + "%");
+      args.add("%" + query.getUrl() + "%");
     }
-    addEqualIfPresent(clauses, args, "service_name", serviceName);
-    addEqualIfPresent(clauses, args, "method", method);
-    if (httpStatus != null) {
+    addEqualIfPresent(clauses, args, "service_name", query.getServiceName());
+    addEqualIfPresent(clauses, args, "method", query.getMethod());
+    if (query.getHttpStatus() != null) {
       clauses.add("http_status = ?");
-      args.add(httpStatus);
+      args.add(query.getHttpStatus());
     }
-    addEqualIfPresent(clauses, args, "client_ip", clientIp);
-    addEqualIfPresent(clauses, args, "principal_name", principalName);
-    addEqualIfPresent(clauses, args, "error_type", errorType);
-    if (tagKey != null && !tagKey.isBlank()) {
-      if (tagValue == null) {
+    addEqualIfPresent(clauses, args, "client_ip", query.getClientIp());
+    addEqualIfPresent(clauses, args, "principal_name", query.getPrincipalName());
+    addEqualIfPresent(clauses, args, "error_type", query.getErrorType());
+    if (query.getTagKey() != null && !query.getTagKey().isBlank()) {
+      if (query.getTagValue() == null) {
         clauses.add("tags LIKE ?");
-        args.add("%\"" + tagKey + "\":%");
+        args.add("%\"" + query.getTagKey() + "\":%");
       } else {
         clauses.add("tags LIKE ?");
-        args.add("%\"" + tagKey + "\":\"" + tagValue + "\"%");
+        args.add("%\"" + query.getTagKey() + "\":\"" + query.getTagValue() + "\"%");
       }
     }
 
@@ -209,10 +187,6 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
         .errorMessage(rs.getString("error_message"))
         .timestamp(rs.getTimestamp("timestamp").toLocalDateTime())
         .tags(parseTags(rs.getString("tags")))
-        .tags(parseTags(rs.getString("tags")))
-        .tags(parseTags(rs.getString("tags")))
-        .tags(parseTags(rs.getString("tags")))
-        .tags(parseTags(rs.getString("tags")))
         .build();
   }
 
@@ -223,13 +197,13 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
    * @param tags the tag map; may be {@code null} or empty
    * @return a JSON object string, or {@code null} when there are no tags
    */
-  private static String serializeTags(java.util.Map<String, String> tags) {
+  private static String serializeTags(Map<String, String> tags) {
     if (tags == null || tags.isEmpty()) {
       return null;
     }
     StringBuilder sb = new StringBuilder("{");
     boolean first = true;
-    for (java.util.Map.Entry<String, String> entry : tags.entrySet()) {
+    for (Map.Entry<String, String> entry : tags.entrySet()) {
       if (!first) {
         sb.append(',');
       }
@@ -241,24 +215,24 @@ public class JdbcAuditLogStore implements AuditLogStore, AuditLogSearchStore {
   }
 
   /**
-   * Parses the compact JSON object string written by {@link #serializeTags(java.util.Map)}.
-   * Malformed input yields an empty map.
+   * Parses the compact JSON object string written by {@link #serializeTags(Map)}. Malformed input
+   * yields an empty map.
    *
    * @param json the stored JSON; may be {@code null}
    * @return a parsed map, never {@code null}
    */
-  private static java.util.Map<String, String> parseTags(String json) {
+  private static Map<String, String> parseTags(String json) {
     if (json == null || json.isBlank()) {
-      return java.util.Map.of();
+      return Map.of();
     }
-    java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+    Map<String, String> result = new LinkedHashMap<>();
     String trimmed = json.trim();
     if (trimmed.length() < 2 || trimmed.charAt(0) != '{') {
-      return java.util.Map.of();
+      return Map.of();
     }
     String inner = trimmed.substring(1, trimmed.length() - 1);
     if (inner.isBlank()) {
-      return java.util.Map.of();
+      return Map.of();
     }
     for (String pair : inner.split(",")) {
       int colon = pair.indexOf(':');

@@ -21,6 +21,8 @@
 - Added unit, auto-configuration, and end-to-end tests for path-based auditing, plus a `path-based` demo profile and an unannotated `PathAuditDemoController`
 - Added the Path-Based Auditing Guide and expanded the README with rule examples and the new configuration reference
 - Inbound capture now skips request/response wrapping entirely when no policy audits the request
+- Decoupled the storage search SPI from Spring Data: `AuditLogSearchStore` now takes a framework-neutral `AuditLogQuery` and returns `AuditLogPage`; HTTP pagination is handled at the web layer (BREAKING for custom stores — see `docs/spi-migration-guide.md`)
+- Fixed a duplicate `.tags(...)` builder call in the JDBC store's row mapper
 
 ### [2.2.0] - 2026-06-12
 

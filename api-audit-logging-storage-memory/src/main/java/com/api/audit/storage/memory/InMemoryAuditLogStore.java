@@ -1,16 +1,15 @@
 package com.api.audit.storage.memory;
 
 import com.api.audit.model.AuditLogRecord;
+import com.api.audit.query.AuditLogPage;
+import com.api.audit.query.AuditLogQuery;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditLogStore;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 
 /**
  * In-memory implementation of audit storage.
@@ -34,51 +33,55 @@ public class InMemoryAuditLogStore implements AuditLogStore, AuditLogSearchStore
     records.add(record);
   }
 
-  /** Searches in-memory records using the same filters exposed by the internal audit endpoint. */
+  /** Searches in-memory records using the framework-neutral query contract. */
   @Override
-  public Page<AuditLogRecord> search(
-      String correlationId,
-      LocalDateTime start,
-      LocalDateTime end,
-      String type,
-      String url,
-      String serviceName,
-      String method,
-      Integer httpStatus,
-      String clientIp,
-      String principalName,
-      String errorType,
-      String tagKey,
-      String tagValue,
-      Pageable pageable) {
-
+  public AuditLogPage<AuditLogRecord> search(AuditLogQuery query) {
     List<AuditLogRecord> filtered =
         records.stream()
             .filter(
-                record -> correlationId == null || correlationId.equals(record.getCorrelationId()))
-            .filter(record -> start == null || !record.getTimestamp().isBefore(start))
-            .filter(record -> end == null || !record.getTimestamp().isAfter(end))
-            .filter(record -> type == null || type.equals(record.getType()))
+                r ->
+                    query.getCorrelationId() == null
+                        || query.getCorrelationId().equals(r.getCorrelationId()))
+            .filter(r -> query.getStart() == null || !r.getTimestamp().isBefore(query.getStart()))
+            .filter(r -> query.getEnd() == null || !r.getTimestamp().isAfter(query.getEnd()))
+            .filter(r -> query.getType() == null || query.getType().equals(r.getType()))
             .filter(
-                record -> url == null || (record.getUrl() != null && record.getUrl().contains(url)))
-            .filter(record -> serviceName == null || serviceName.equals(record.getServiceName()))
-            .filter(record -> method == null || method.equals(record.getMethod()))
-            .filter(record -> httpStatus == null || httpStatus.equals(record.getHttpStatus()))
-            .filter(record -> clientIp == null || clientIp.equals(record.getClientIp()))
+                r ->
+                    query.getUrl() == null
+                        || (r.getUrl() != null && r.getUrl().contains(query.getUrl())))
             .filter(
-                record -> principalName == null || principalName.equals(record.getPrincipalName()))
-            .filter(record -> errorType == null || errorType.equals(record.getErrorType()))
-            .filter(record -> matchesTags(record, tagKey, tagValue))
-            .sorted(Comparator.comparing(AuditLogRecord::getTimestamp))
+                r ->
+                    query.getServiceName() == null
+                        || query.getServiceName().equals(r.getServiceName()))
+            .filter(r -> query.getMethod() == null || query.getMethod().equals(r.getMethod()))
+            .filter(
+                r ->
+                    query.getHttpStatus() == null
+                        || query.getHttpStatus().equals(r.getHttpStatus()))
+            .filter(r -> query.getClientIp() == null || query.getClientIp().equals(r.getClientIp()))
+            .filter(
+                r ->
+                    query.getPrincipalName() == null
+                        || query.getPrincipalName().equals(r.getPrincipalName()))
+            .filter(
+                r -> query.getErrorType() == null || query.getErrorType().equals(r.getErrorType()))
+            .filter(r -> matchesTags(r, query.getTagKey(), query.getTagValue()))
+            .sorted(timestampComparator(query.isSortAscending()))
             .toList();
 
-    int startIndex = (int) pageable.getOffset();
+    int size = query.effectiveSize();
+    int startIndex = (int) query.offset();
     if (startIndex >= filtered.size()) {
-      return new PageImpl<>(List.of(), pageable, filtered.size());
+      return new AuditLogPage<>(List.of(), query.effectivePage(), size, filtered.size());
     }
+    int endIndex = Math.min(startIndex + size, filtered.size());
+    return new AuditLogPage<>(
+        filtered.subList(startIndex, endIndex), query.effectivePage(), size, filtered.size());
+  }
 
-    int endIndex = Math.min(startIndex + pageable.getPageSize(), filtered.size());
-    return new PageImpl<>(filtered.subList(startIndex, endIndex), pageable, filtered.size());
+  private Comparator<AuditLogRecord> timestampComparator(boolean ascending) {
+    Comparator<AuditLogRecord> comparator = Comparator.comparing(AuditLogRecord::getTimestamp);
+    return ascending ? comparator : comparator.reversed();
   }
 
   /**
@@ -95,7 +98,7 @@ public class InMemoryAuditLogStore implements AuditLogStore, AuditLogSearchStore
     if (tagKey == null || tagKey.isBlank()) {
       return true;
     }
-    java.util.Map<String, String> tags = record.getTags();
+    Map<String, String> tags = record.getTags();
     if (tags == null || !tags.containsKey(tagKey)) {
       return false;
     }
