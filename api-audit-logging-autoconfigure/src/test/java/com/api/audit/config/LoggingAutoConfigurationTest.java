@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 
 import com.api.audit.filter.IncomingLoggingFilter;
 import com.api.audit.listener.ApiLogListener;
+import com.api.audit.policy.SamplingStrategy;
 import com.api.audit.spi.AuditMetrics;
 import com.api.audit.spi.NoOpAuditMetrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -111,6 +112,41 @@ class LoggingAutoConfigurationTest {
             context -> {
               assertThat(context).hasSingleBean(AuditMetrics.class);
               assertThat(context).hasSingleBean(MicrometerAuditMetrics.class);
+              assertThat(context).hasSingleBean(io.micrometer.core.instrument.MeterRegistry.class);
+            });
+  }
+
+  @Test
+  @DisplayName("GIVEN default config WHEN context loads THEN a sampling strategy bean is present")
+  void shouldRegisterSamplingStrategy() {
+    contextRunner.run(context -> assertThat(context).hasSingleBean(SamplingStrategy.class));
+  }
+
+  @Test
+  @DisplayName("GIVEN sampling enabled WHEN context loads THEN the strategy is active")
+  void samplingStrategyReflectsConfiguration() {
+    contextRunner
+        .withPropertyValues(
+            "audit.logging.sampling.enabled=true", "audit.logging.sampling.sample-rate=0.25")
+        .run(
+            context -> {
+              SamplingStrategy strategy = context.getBean(SamplingStrategy.class);
+              assertThat(strategy.isActive()).isTrue();
+            });
+  }
+
+  @Test
+  @DisplayName("GIVEN MeterRegistry WHEN a drop is recorded THEN the counter increments")
+  void dropMetricIsRecorded() {
+    contextRunner
+        .withBean(SimpleMeterRegistry.class)
+        .run(
+            context -> {
+              AuditMetrics metrics = context.getBean(AuditMetrics.class);
+              metrics.recordDropped("SAMPLED", null);
+              SimpleMeterRegistry registry = context.getBean(SimpleMeterRegistry.class);
+              assertThat(registry.get("api.audit.records.dropped").counter().count())
+                  .isEqualTo(1.0);
             });
   }
 }

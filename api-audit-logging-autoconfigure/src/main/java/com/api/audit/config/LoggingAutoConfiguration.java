@@ -11,6 +11,7 @@ import com.api.audit.policy.AnnotationAuditPolicy;
 import com.api.audit.policy.AuditDecisionEngine;
 import com.api.audit.policy.AuditPolicy;
 import com.api.audit.policy.PathAuditPolicy;
+import com.api.audit.policy.SamplingStrategy;
 import com.api.audit.spi.AuditLogSearchStore;
 import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.JsonMasker;
@@ -112,7 +113,7 @@ public class LoggingAutoConfiguration {
    * <p>All policies emit a WARN log on saturation to aid capacity tuning.
    */
   @Bean(name = "logExecutor")
-  public Executor logExecutor() {
+  public Executor logExecutor(AuditMetrics auditMetrics) {
     AuditLoggingProperties.Async asyncProps = properties.getAsync();
 
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -120,7 +121,8 @@ public class LoggingAutoConfiguration {
     executor.setMaxPoolSize(asyncProps.getMaxPoolSize());
     executor.setQueueCapacity(asyncProps.getQueueCapacity());
     executor.setThreadNamePrefix("AuditLog-");
-    executor.setRejectedExecutionHandler(buildRejectionHandler(asyncProps.getRejectionPolicy()));
+    executor.setRejectedExecutionHandler(
+        buildRejectionHandler(asyncProps.getRejectionPolicy(), auditMetrics));
     executor.initialize();
 
     log.info(
@@ -139,7 +141,8 @@ public class LoggingAutoConfiguration {
    * <p>Every policy variant emits a WARN log when triggered so saturation is always observable
    * regardless of which policy the developer chose.
    */
-  private RejectedExecutionHandler buildRejectionHandler(AuditRejectionPolicy policy) {
+  private RejectedExecutionHandler buildRejectionHandler(
+      AuditRejectionPolicy policy, AuditMetrics auditMetrics) {
     return switch (policy) {
       case CALLER_RUNS ->
           new ThreadPoolExecutor.CallerRunsPolicy() {
@@ -154,11 +157,13 @@ public class LoggingAutoConfiguration {
 
       case DISCARD_OLDEST ->
           new ThreadPoolExecutor.DiscardOldestPolicy() {
+            // Records a drop metric before discarding the oldest queued task.
             @Override
             public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
               log.warn(
                   "[AuditLog] Queue full (DISCARD_OLDEST) — oldest pending audit record dropped."
                       + " Consider increasing audit.logging.async.queue-capacity.");
+              auditMetrics.recordDropped("QUEUE_FULL", null);
               super.rejectedExecution(r, e);
             }
           };
@@ -170,6 +175,7 @@ public class LoggingAutoConfiguration {
               log.warn(
                   "[AuditLog] Queue full (DISCARD) — incoming audit record dropped."
                       + " Consider increasing audit.logging.async.queue-capacity.");
+              auditMetrics.recordDropped("QUEUE_FULL", null);
               super.rejectedExecution(r, e);
             }
           };
@@ -219,8 +225,24 @@ public class LoggingAutoConfiguration {
   /** Configures the filter responsible for intercepting and logging raw inbound HTTP traffic. */
   @Bean
   public IncomingLoggingFilter incomingLoggingFilter(
-      ApplicationEventPublisher publisher, AuditDecisionEngine decisionEngine) {
-    return new IncomingLoggingFilter(publisher, appName, properties, decisionEngine);
+      ApplicationEventPublisher publisher,
+      AuditDecisionEngine decisionEngine,
+      SamplingStrategy samplingStrategy,
+      AuditMetrics auditMetrics) {
+    return new IncomingLoggingFilter(
+        publisher, appName, properties, decisionEngine, samplingStrategy, auditMetrics);
+  }
+
+  /**
+   * Registers the sampling strategy. Sampling is disabled by default, so this bean has no effect
+   * unless {@code audit.logging.sampling.enabled=true}.
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public SamplingStrategy samplingStrategy() {
+    AuditLoggingProperties.Sampling sampling = properties.getSampling();
+    return new SamplingStrategy(
+        sampling.isEnabled(), sampling.getSampleRate(), sampling.isAlwaysCaptureErrors());
   }
 
   /** Registers the {@link IncomingLoggingFilter} with highest precedence in the filter chain. */

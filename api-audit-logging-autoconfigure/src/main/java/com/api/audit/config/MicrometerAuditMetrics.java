@@ -12,7 +12,8 @@ import java.time.Duration;
  *
  * <p>The implementation intentionally keeps tag cardinality low. Record type is safe because the
  * library emits a small known set such as {@code INCOMING}, {@code OUTGOING}, and error variants.
- * URLs, correlation IDs, headers, and descriptions are deliberately not used as metric tags.
+ * URLs, correlation IDs, headers, and descriptions are deliberately not used as metric tags. Drop
+ * reasons are restricted to a small known set ({@code QUEUE_FULL}, {@code SAMPLED}).
  *
  * @author Puneet Swarup
  */
@@ -45,6 +46,16 @@ public class MicrometerAuditMetrics implements AuditMetrics {
         .description("Audit records that failed during masking or storage")
         .tag("type", metricType(record))
         .tag("exception", exception == null ? "unknown" : exception.getClass().getSimpleName())
+        .register(meterRegistry)
+        .increment();
+  }
+
+  @Override
+  public void recordDropped(String reason, AuditLogRecord record) {
+    Counter.builder("api.audit.records.dropped")
+        .description("Audit records deliberately not stored (queue rejection or sampling)")
+        .tag("reason", reason == null ? "unknown" : reason)
+        .tag("type", metricType(record))
         .register(meterRegistry)
         .increment();
   }

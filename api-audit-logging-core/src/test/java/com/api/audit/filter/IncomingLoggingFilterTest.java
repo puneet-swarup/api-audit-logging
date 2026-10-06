@@ -9,6 +9,8 @@ import com.api.audit.event.ApiLogEvent;
 import com.api.audit.policy.AnnotationAuditPolicy;
 import com.api.audit.policy.AuditDecisionEngine;
 import com.api.audit.policy.PathAuditPolicy;
+import com.api.audit.policy.SamplingStrategy;
+import com.api.audit.spi.NoOpAuditMetrics;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,7 +53,13 @@ class IncomingLoggingFilterTest {
         new AnnotationAuditPolicy(properties.getPolicies().getAnnotation().isEnabled());
     PathAuditPolicy path = new PathAuditPolicy(properties);
     AuditDecisionEngine engine = new AuditDecisionEngine(java.util.List.of(annotation, path));
-    return new IncomingLoggingFilter(publisher, appName, properties, engine);
+    SamplingStrategy sampling =
+        new SamplingStrategy(
+            properties.getSampling().isEnabled(),
+            properties.getSampling().getSampleRate(),
+            properties.getSampling().isAlwaysCaptureErrors());
+    return new IncomingLoggingFilter(
+        publisher, appName, properties, engine, sampling, new NoOpAuditMetrics());
   }
 
   @Test
@@ -223,6 +231,24 @@ class IncomingLoggingFilterTest {
     assertEquals("INCOMING_ERROR", eventCaptor.getValue().record().getType());
     assertEquals(ServletException.class.getName(), eventCaptor.getValue().record().getErrorType());
     assertEquals("Controller failed", eventCaptor.getValue().record().getErrorMessage());
+  }
+
+  @Test
+  @DisplayName("GIVEN sampling rate 0.0 WHEN a success is captured THEN it is not published")
+  void samplingDropsSuccessRecord() throws ServletException, IOException {
+    AuditLoggingProperties properties = new AuditLoggingProperties();
+    properties.getSampling().setEnabled(true);
+    properties.getSampling().setSampleRate(0.0);
+    properties.getSampling().setAlwaysCaptureErrors(true);
+    filter = buildFilter(properties);
+
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/sampled");
+    request.setAttribute("AUDIT_LOG_ENABLED", true);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    filter.doFilterInternal(request, response, chain);
+
+    verify(publisher, never()).publishEvent(any(ApiLogEvent.class));
   }
 
   @Test

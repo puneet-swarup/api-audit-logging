@@ -8,6 +8,8 @@ import com.api.audit.model.AuditLogRecord;
 import com.api.audit.policy.AuditDecision;
 import com.api.audit.policy.AuditDecisionEngine;
 import com.api.audit.policy.CaptureMode;
+import com.api.audit.policy.SamplingStrategy;
+import com.api.audit.spi.AuditMetrics;
 import com.api.audit.util.AuditMetadataFormatter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -60,6 +62,8 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
   private final String appName;
   private final AuditLoggingProperties properties;
   private final AuditDecisionEngine decisionEngine;
+  private final SamplingStrategy samplingStrategy;
+  private final AuditMetrics auditMetrics;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   /**
@@ -74,11 +78,15 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
       ApplicationEventPublisher publisher,
       String appName,
       AuditLoggingProperties properties,
-      AuditDecisionEngine decisionEngine) {
+      AuditDecisionEngine decisionEngine,
+      SamplingStrategy samplingStrategy,
+      AuditMetrics auditMetrics) {
     this.publisher = publisher;
     this.appName = appName;
     this.properties = properties;
     this.decisionEngine = decisionEngine;
+    this.samplingStrategy = samplingStrategy;
+    this.auditMetrics = auditMetrics;
   }
 
   @Override
@@ -203,6 +211,11 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
     try {
       AuditLogRecord record =
           assembleAuditRecord(auditReq, originalReq, resWrap, startTime, failure, decision);
+      if (!samplingStrategy.shouldStore(record)) {
+        // Sampled out: record the drop and skip publishing.
+        auditMetrics.recordDropped("SAMPLED", record);
+        return;
+      }
       publisher.publishEvent(new ApiLogEvent(record));
     } catch (Exception e) {
       log.error(

@@ -1,6 +1,8 @@
 package com.api.audit.config;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -75,6 +77,8 @@ public class AuditLoggingProperties {
   @NestedConfigurationProperty private Internal internal = new Internal();
 
   @NestedConfigurationProperty private Masking masking = new Masking();
+
+  @Valid @NestedConfigurationProperty private Sampling sampling = new Sampling();
 
   @Valid @NestedConfigurationProperty private Policies policies = new Policies();
 
@@ -304,6 +308,42 @@ public class AuditLoggingProperties {
      * }</pre>
      */
     private List<String> additionalFields = new ArrayList<>();
+  }
+
+  /**
+   * Configuration for audit record sampling.
+   *
+   * <p>Sampling reduces audit volume by storing only a fraction of successful records while always
+   * storing errors. It is disabled by default so behavior is unchanged unless configured.
+   */
+  @Getter
+  @Setter
+  public static class Sampling {
+
+    /**
+     * Whether sampling is active. Default: {@code false}.
+     *
+     * <p>When {@code false}, every captured record is stored.
+     */
+    private boolean enabled = false;
+
+    /**
+     * The fraction of non-error records to store, in {@code [0.0, 1.0]}. Default: {@code 1.0}.
+     *
+     * <p>For example {@code 0.1} stores roughly one in ten successful records. Values below {@code
+     * 1.0} only take effect when {@link #enabled} is {@code true}.
+     */
+    @DecimalMin("0.0")
+    @DecimalMax("1.0")
+    private double sampleRate = 1.0;
+
+    /**
+     * Whether error records bypass sampling and are always stored. Default: {@code true}.
+     *
+     * <p>Keeping this enabled ensures failures are never lost to sampling, which is usually the
+     * reason an operator turns sampling on in the first place.
+     */
+    private boolean alwaysCaptureErrors = true;
   }
 
   /**

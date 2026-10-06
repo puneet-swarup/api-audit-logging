@@ -20,6 +20,7 @@ Replace `jpa` with any profile below.
 | `kafka` | Kafka | no | Streaming audit records to a broker |
 | `path-controls` | JPA | yes | Ant-style include/exclude path controls |
 | `path-based` | JPA | yes | Zero-code-change path auditing (no annotations) |
+| `sampling` | JPA | yes | Sampling: store a fraction of successes, always store errors |
 
 Set `KAFKA_BOOTSTRAP_SERVERS` when using the `kafka` profile.
 

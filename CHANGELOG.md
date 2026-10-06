@@ -4,6 +4,8 @@
 - Hardened the internal endpoint security filter with constant-time API-key comparison and exact/child path matching
 - Sanitized inbound `X-Correlation-ID` values (control-character stripping, length clamp) to prevent log/MDC injection
 - Added `tagKey`/`tagValue` filters to the internal audit search endpoint and all searchable stores (JPA, JDBC, memory)
+- Added optional sampling (`audit.logging.sampling.*`) that stores a fraction of successful records while always capturing errors
+- Added `AuditMetrics.recordDropped` and `api.audit.records.dropped` counter; rejection-policy drops and sampled-out records are now observable
 
 - Added a pluggable audit policy engine (`AuditDecisionEngine`) that resolves one decision per request from one or more `AuditPolicy` sources
 - Added configuration-driven, zero-code-change path-based auditing via `audit.logging.policies.path-based.rules`

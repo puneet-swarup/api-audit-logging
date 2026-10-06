@@ -21,4 +21,9 @@ public class NoOpAuditMetrics implements AuditMetrics {
   public void recordFailure(AuditLogRecord record, Exception exception) {
     // Intentionally empty.
   }
+
+  @Override
+  public void recordDropped(String reason, AuditLogRecord record) {
+    // Intentionally empty.
+  }
 }

@@ -133,3 +133,25 @@
   params, JPA spec tag predicate assertion, demo tag-filter integration test. Controller/search
   service/spec tests updated for the new signature.
 - Full build GREEN.
+
+## PHASE 4 — Sampling, Metrics & Backpressure (2026-10-06)
+- Sampling:
+  - New config block `audit.logging.sampling.{enabled,sample-rate,always-capture-errors}`
+    (JSR-380 validated: sample-rate in [0.0, 1.0]).
+  - `SamplingStrategy` (core, policy package): random keep at sample-rate for successes; error
+    records (type ends `_ERROR` or httpStatus >= 500) always kept when always-capture-errors=true.
+    Defensive clamping + kept/dropped counters.
+  - Applied in `IncomingLoggingFilter.processAuditCapture` (post-assembly, where status is known).
+    Sampled-out records call `AuditMetrics.recordDropped("SAMPLED", record)` and are not published.
+  - Sampling is disabled by default (rate 1.0) — no behavior change unless configured.
+- Metrics:
+  - `AuditMetrics` gained `recordDropped(String reason, AuditLogRecord record)`.
+  - NoOp + Micrometer impls updated; Micrometer emits `api.audit.records.dropped{reason,type}`.
+- Backpressure:
+  - `logExecutor` now takes `AuditMetrics`; DISCARD_OLDEST and DISCARD rejection handlers call
+    `recordDropped("QUEUE_FULL", null)` in addition to the existing WARN log.
+- Tests: `SamplingStrategyTest` (disabled/full/zero/error-always/clamped/approximate-rate),
+  filter sampling-drop test, autoconfigure sampling-bean + drop-counter tests.
+- README: new "Sampling and Metrics" section + config rows. CHANGELOG updated.
+- Full build GREEN.
+- NOTE: `patch_file` leaves a `.orig` backup beside the patched file — always delete it after.

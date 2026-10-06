@@ -132,6 +132,32 @@ See the [Path-Based Auditing Guide](docs/path-based-auditing-guide.md) for the f
 
     .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-based"
 
+## Sampling and Metrics
+
+Sampling reduces audit volume on high-traffic services. When enabled, a configurable fraction of
+successful records is stored and the rest are dropped; error records are always stored so failures
+are never lost.
+
+    audit:
+      logging:
+        sampling:
+          enabled: true
+          sample-rate: 0.1
+          always-capture-errors: true
+
+The library records audit activity through an `AuditMetrics` SPI. When Micrometer is on the
+classpath, counters and timers are registered automatically:
+
+| Meter | Type | Meaning |
+|---|---|---|
+| `api.audit.records.saved` | counter | Records successfully stored, tagged by `type` |
+| `api.audit.records.failed` | counter | Masking or storage failures, tagged by `type` and `exception` |
+| `api.audit.records.dropped` | counter | Deliberate drops, tagged by `reason` (`QUEUE_FULL`, `SAMPLED`) and `type` |
+| `api.audit.store.duration` | timer | Time spent handing a record to the active store, tagged by `type` |
+
+A non-Micrometer no-op implementation is used when Micrometer is absent, and a custom `AuditMetrics`
+bean always takes precedence.
+
 ## Storage Choices
 
 ### JPA
@@ -286,6 +312,7 @@ The sample app includes profiles that show the same API capture flow with differ
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=kafka"
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-controls"
 .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=path-based"
+.\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=sampling"
 ```
 
 The `jpa`, `jdbc`, `memory`, and `path-based` profiles expose `/internal/audit-logs` because they
@@ -353,6 +380,9 @@ All properties use the `audit.logging` prefix.
 | `audit.logging.policies.path-based.rules[*].description` | derived | Description stored on matched records |
 | `audit.logging.policies.path-based.rules[*].capture` | `FULL` | `FULL`, `METADATA_ONLY`, or `BODY_ONLY` |
 | `audit.logging.policies.path-based.rules[*].tags` | `{}` | Custom key/value dimensions attached to records |
+| `audit.logging.sampling.enabled` | `false` | Enable sampling of successful records |
+| `audit.logging.sampling.sample-rate` | `1.0` | Fraction of non-error records to store (0.0–1.0) |
+| `audit.logging.sampling.always-capture-errors` | `true` | Always store error records regardless of sample rate |
 
 ### Path Controls
 

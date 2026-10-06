@@ -1,0 +1,21 @@
+# Profile: sampling
+#
+# Demonstrates audit sampling. Successful records are stored at a low rate, while errors are always
+# stored. Run it with:
+#   .\gradlew.bat :api-audit-demo-app:bootRun --args="--spring.profiles.active=sampling"
+#
+# Then hit /api/v1/hello many times and query /internal/audit-logs to observe that only a fraction
+# of successful calls are stored. Hit a failing endpoint to confirm error records are always
+# captured.
+
+audit:
+  logging:
+    enabled: true
+    storage:
+      type: jpa
+    sampling:
+      enabled: true
+      # Store roughly 1 in 5 successful records.
+      sample-rate: 0.2
+      # Errors bypass sampling and are always stored.
+      always-capture-errors: true
