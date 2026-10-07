@@ -302,3 +302,17 @@
   AOT plus these hints cover the library.
 - Full build GREEN.
 - PHASE 7 COMPLETE (retention SPI, Kafka DLQ/retry, native hints).
+
+## 4.0.0 — Framework-neutral AuditRequest + WebFlux (2026-10-07)
+- New `com.api.audit.spi.AuditRequest` (path, method, header, attribute get/set) and
+  `ServletAuditRequest` adapter.
+- AuditPolicy.decide and AuditDecisionEngine.decide now take AuditRequest (BREAKING for custom
+  policies). Updated AnnotationAuditPolicy, PathAuditPolicy, IncomingLoggingFilter (wraps req),
+  tests, and the examples custom policy.
+- New module api-audit-logging-webflux: ReactiveAuditRequest (over ServerWebExchange) +
+  ReactiveIncomingAuditFilter (WebFilter) + WebFluxAuditAutoConfiguration. Correlation carried in
+  reactor Context and echoed on the response header. Reuses engine/policies/sampling/metrics.
+- Tests: ReactiveIncomingAuditFilterTest (match, non-match, correlation propagation).
+- Docs: spi-migration-guide 4.0.0 section; README WebFlux section + module row; CHANGELOG split into
+  3.2.0 (Phase 7, non-breaking) and 4.0.0 (breaking AuditRequest + WebFlux). Version bumped to 4.0.0.
+- Full build GREEN.

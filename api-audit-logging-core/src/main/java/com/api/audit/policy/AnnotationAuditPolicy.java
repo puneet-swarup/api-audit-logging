@@ -1,7 +1,7 @@
 package com.api.audit.policy;
 
 import com.api.audit.context.AuditRequestAttributes;
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.Optional;
 
 /**
@@ -46,7 +46,7 @@ public class AnnotationAuditPolicy implements AuditPolicy {
   }
 
   @Override
-  public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+  public Optional<AuditDecision> decide(AuditRequest request, String path) {
     if (!enabled) {
       return Optional.empty();
     }

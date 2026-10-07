@@ -34,10 +34,10 @@ class PathAuditPolicyTest {
     return r;
   }
 
-  private static MockHttpServletRequest request(String method, String path) {
+  private static com.api.audit.spi.AuditRequest request(String method, String path) {
     MockHttpServletRequest req = new MockHttpServletRequest(method, path);
     req.setRequestURI(path);
-    return req;
+    return new com.api.audit.spi.ServletAuditRequest(req);
   }
 
   @Test

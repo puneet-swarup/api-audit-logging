@@ -1,7 +1,7 @@
 package com.api.audit.policy;
 
 import com.api.audit.config.AuditLoggingProperties;
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -81,7 +81,7 @@ public class PathAuditPolicy implements AuditPolicy {
   }
 
   @Override
-  public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+  public Optional<AuditDecision> decide(AuditRequest request, String path) {
     if (!enabled || rules.isEmpty()) {
       return Optional.empty();
     }

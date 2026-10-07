@@ -4,7 +4,7 @@ import com.api.audit.policy.AuditDecision;
 import com.api.audit.policy.AuditPolicy;
 import com.api.audit.policy.AuditPolicyOrder;
 import com.api.audit.policy.CaptureMode;
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.Map;
 import java.util.Optional;
 
@@ -47,7 +47,7 @@ public class HeaderBasedAuditPolicy implements AuditPolicy {
    * @return a decision, or empty when the header is absent
    */
   @Override
-  public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+  public Optional<AuditDecision> decide(AuditRequest request, String path) {
     String flag = request.getHeader("X-Audit");
     if (!"on".equalsIgnoreCase(flag)) {
       return Optional.empty();

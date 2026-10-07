@@ -2,7 +2,7 @@ package com.api.audit.policy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +32,7 @@ class AuditDecisionEngineTest {
       }
 
       @Override
-      public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+      public Optional<AuditDecision> decide(AuditRequest request, String path) {
         return result;
       }
     };
@@ -101,7 +101,7 @@ class AuditDecisionEngineTest {
           }
 
           @Override
-          public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+          public Optional<AuditDecision> decide(AuditRequest request, String path) {
             laterPolicyConsulted[0] = true;
             return Optional.of(AuditDecision.audit("later"));
           }
@@ -124,7 +124,7 @@ class AuditDecisionEngineTest {
           }
 
           @Override
-          public Optional<AuditDecision> decide(HttpServletRequest request, String path) {
+          public Optional<AuditDecision> decide(AuditRequest request, String path) {
             throw new IllegalStateException("boom");
           }
         };

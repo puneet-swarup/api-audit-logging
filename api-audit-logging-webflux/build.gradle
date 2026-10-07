@@ -1,0 +1,9 @@
+dependencies {
+    api project(':api-audit-logging-core')
+    api 'org.springframework.boot:spring-boot-starter-webflux'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+}
+
+jar { enabled = true; archiveClassifier.set('') }

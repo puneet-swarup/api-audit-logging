@@ -55,6 +55,7 @@ For finer control, depend on only the modules you need:
 | `api-audit-logging-storage-kafka` | Kafka publishing sink for audit streams |
 | `api-audit-logging-storage-file` | JSON-lines file / stdout sink for local and container use |
 | `api-audit-logging-test` | Test slice and assertions for host applications |
+| `api-audit-logging-webflux` | Reactive inbound capture (`WebFilter`) for WebFlux apps |
 
 When storage modules are used directly, select the storage explicitly with
 `audit.logging.storage.type`. Direct storage modules do not silently become active just because they
@@ -340,6 +341,17 @@ caller still receives it.
 
 Request bodies cannot be read from an opaque `ClientRequest` body; to capture a request body, build
 the request with `AuditBodyInserters.fromValue(value, holder)`.
+
+## WebFlux (Reactive) Inbound Capture
+
+For reactive applications, add `api-audit-logging-webflux`. It registers a `WebFilter` that captures
+inbound requests using the same decision engine, policies, sampling, and metrics as the servlet path,
+so path-based rules work identically.
+
+    implementation "io.github.puneet-swarup:api-audit-logging-webflux:4.0.0"
+
+The correlation ID is carried in the reactor `Context` and echoed on the response `X-Correlation-ID`
+header. As with the servlet filter, metadata is captured; reactive bodies are not consumed.
 
 ## Demo App Profiles
 

@@ -70,3 +70,48 @@ Key points:
 
 The old signature was removed in this release. To stay on the previous contract, pin the library to
 `2.2.0`. To adopt the new one, update your `AuditLogSearchStore` implementation as shown above.
+
+## 4.0.0: `AuditPolicy` moves to the framework-neutral `AuditRequest`
+
+### Who this affects
+
+Only applications that implement `com.api.audit.policy.AuditPolicy` themselves. Built-in policies
+and everything else are updated for you.
+
+### What changed
+
+`AuditPolicy.decide(...)` (and `AuditDecisionEngine.decide(...)`) now take a framework-neutral
+`com.api.audit.spi.AuditRequest` instead of `jakarta.servlet.http.HttpServletRequest`. This lets the
+same policies run for servlet MVC and reactive WebFlux.
+
+Before:
+
+    public Optional<AuditDecision> decide(HttpServletRequest request, String path) { ... }
+
+After:
+
+    public Optional<AuditDecision> decide(AuditRequest request, String path) { ... }
+
+### Migrating a custom policy
+
+`AuditRequest` exposes exactly what policies used from the servlet request:
+
+| `AuditRequest` | Replaces |
+|---|---|
+| `getMethod()` | `request.getMethod()` |
+| `getPath()` | `request.getRequestURI()` |
+| `getHeader(name)` | `request.getHeader(name)` |
+| `getAttribute(name)` | `request.getAttribute(name)` |
+| `setAttribute(name, value)` | `request.setAttribute(name, value)` |
+
+A custom policy that only reads headers and the path needs no further change. If your policy needs
+servlet-specific data beyond this surface, cast to `ServletAuditRequest` and call `getRequest()`, or
+keep that logic in a servlet-only policy bean.
+
+If you cannot migrate immediately, pin to `3.1.0`.
+
+### New: WebFlux inbound capture
+
+Add `api-audit-logging-webflux`. It registers a `WebFilter` that uses the same engine, so path-based
+rules and custom policies work identically in reactive applications. The correlation ID is carried in
+the reactor `Context` and echoed on the response header.

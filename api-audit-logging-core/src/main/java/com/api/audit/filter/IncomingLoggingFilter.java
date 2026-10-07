@@ -10,6 +10,7 @@ import com.api.audit.policy.AuditDecisionEngine;
 import com.api.audit.policy.CaptureMode;
 import com.api.audit.policy.SamplingStrategy;
 import com.api.audit.spi.AuditMetrics;
+import com.api.audit.spi.ServletAuditRequest;
 import com.api.audit.util.AuditMetadataFormatter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -101,7 +102,7 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
 
     String path = req.getRequestURI();
-    AuditDecision decision = decisionEngine.decide(req, path);
+    AuditDecision decision = decisionEngine.decide(new ServletAuditRequest(req), path);
     boolean annotationMayApply = properties.getPolicies().getAnnotation().isEnabled();
 
     if (!decision.isAudit() && !annotationMayApply) {
@@ -125,7 +126,7 @@ public class IncomingLoggingFilter extends OncePerRequestFilter {
     } finally {
       // Phase 2 decision: the annotation interceptor has run by now, so the engine can see the
       // AUDIT_LOG_ENABLED attribute and produce the final decision. Path rules still apply.
-      AuditDecision finalDecision = decisionEngine.decide(req, path);
+      AuditDecision finalDecision = decisionEngine.decide(new ServletAuditRequest(req), path);
       if (finalDecision.isAudit()) {
         processAuditCapture(reqToUse, req, resWrap, startTime, failure, finalDecision);
       }

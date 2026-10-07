@@ -22,3 +22,6 @@ include 'api-audit-logging-test'
 
 // File and stdout sinks for local/SRE use
 include 'api-audit-logging-storage-file'
+
+// Reactive (WebFlux) inbound capture
+include 'api-audit-logging-webflux'

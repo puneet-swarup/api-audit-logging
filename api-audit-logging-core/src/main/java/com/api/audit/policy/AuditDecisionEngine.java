@@ -1,6 +1,6 @@
 package com.api.audit.policy;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -68,7 +68,7 @@ public class AuditDecisionEngine {
    * @param path the request path to match against path rules; never {@code null}
    * @return the resolved decision; never {@code null}, defaults to {@link AuditDecision#SKIP}
    */
-  public AuditDecision decide(HttpServletRequest request, String path) {
+  public AuditDecision decide(AuditRequest request, String path) {
     AuditDecision best = null;
     for (AuditPolicy policy : policies) {
       Optional<AuditDecision> result;

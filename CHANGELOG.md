@@ -1,4 +1,9 @@
-### [Unreleased]
+### [4.0.0] - 2026-10-07
+
+- **BREAKING:** Introduced the framework-neutral `AuditRequest` abstraction. `AuditPolicy.decide(...)` and `AuditDecisionEngine.decide(...)` now take an `AuditRequest` instead of `jakarta.servlet.http.HttpServletRequest`. Custom policies must update their `decide` signature (servlet requests are wrapped via `ServletAuditRequest`). This decouples the policy SPI from the servlet API
+- Added the `api-audit-logging-webflux` module: reactive inbound capture via a `WebFilter` using the same decision engine, policies, sampling, and metrics as the servlet path
+
+### [3.2.0] - 2026-10-07
 
 - Added GraalVM native-image runtime hints for the audit model types (`AuditLogRecord`, `AuditLogQuery`, `AuditLogPage`)
 - Added Kafka dead-letter and bounded retry: the sink observes the producer result, retries failed sends, and routes to a configurable dead-letter topic (`audit.logging.kafka.dead-letter-topic`, `retries`, `retry-backoff-ms`)

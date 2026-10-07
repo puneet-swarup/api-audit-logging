@@ -1,6 +1,6 @@
 package com.api.audit.policy;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.api.audit.spi.AuditRequest;
 import java.util.Optional;
 
 /**
@@ -58,5 +58,5 @@ public interface AuditPolicy {
    * @param path the request path resolved from the request URI; never {@code null}
    * @return an optional decision; empty means the policy has no opinion
    */
-  Optional<AuditDecision> decide(HttpServletRequest request, String path);
+  Optional<AuditDecision> decide(AuditRequest request, String path);
 }
